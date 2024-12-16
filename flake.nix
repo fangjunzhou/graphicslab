@@ -26,6 +26,19 @@
                 python3
                 uv
               ];
+
+              shellHook = ''
+                # Create the virtual environment if it doesn't exist
+                if [ ! -d .venv ]; then
+                  python3 -m venv .venv
+                fi
+
+                # Activate the virtual environment
+                source .venv/bin/activate
+
+                # Add .venv/bin to PATH
+                export PATH=$PWD/.venv/bin:$PATH
+              '';
             };
         }
       );
