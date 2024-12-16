@@ -1,0 +1,10 @@
+[project]
+name = "moderngl-playground"
+version = "0.1.0"
+description = "A playground project for python moderngl library"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "moderngl-window>=3.0.3",
+    "moderngl>=5.12.0",
+]
