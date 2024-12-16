@@ -23,5 +23,5 @@ dev = [
 
 [project.scripts]
 start = "moderngl_playground.__main__:main"
-square = "moderngl_playground.square:main"
-line = "moderngl_playground.line:main"
+square = "moderngl_playground.demo.square:main"
+line = "moderngl_playground.demo.line:main"
