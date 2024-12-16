@@ -25,3 +25,4 @@ dev = [
 start = "moderngl_playground.__main__:main"
 square = "moderngl_playground.demo.square:main"
 line = "moderngl_playground.demo.line:main"
+triangle = "moderngl_playground.demo.triangle:main"
