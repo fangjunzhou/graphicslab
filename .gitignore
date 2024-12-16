@@ -1,2 +1,5 @@
 # Misc
 .direnv/
+
+# Python
+__pycache__/
