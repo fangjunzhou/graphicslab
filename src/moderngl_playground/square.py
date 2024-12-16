@@ -9,7 +9,8 @@ def main():
     ctx = moderngl.create_context(standalone=True)
     # Load shader.
     module_path = importlib.resources.files(__package__)
-    vertex_shader_src = (module_path / "shaders" / "square.glsl").read_text()
+    vertex_shader_src = (module_path / "shaders" /
+                         "square" / "vert.glsl").read_text()
     program = ctx.program(vertex_shader=vertex_shader_src,
                           varyings=("value", "square"))
     # Number of entries to calculate.
