@@ -9,6 +9,8 @@ dependencies = [
     "moderngl>=5.12.0",
     "numpy>=2.2.0",
     "pillow>=11.0.0",
+    "pyglm>=2.7.3",
+    "trimesh[easy]>=4.5.3",
 ]
 
 [build-system]
@@ -19,6 +21,7 @@ build-backend = "hatchling.build"
 dev = [
     "autopep8>=2.3.1",
     "debugpy>=1.8.11",
+    "jupyterlab>=4.3.3",
 ]
 
 [project.scripts]
@@ -26,3 +29,4 @@ start = "moderngl_playground.__main__:main"
 square = "moderngl_playground.demo.square:main"
 line = "moderngl_playground.demo.line:main"
 triangle = "moderngl_playground.demo.triangle:main"
+mesh-viewer = "moderngl_playground.demo.mesh_viewer:main"
