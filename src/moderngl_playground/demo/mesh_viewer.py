@@ -1,5 +1,5 @@
 from enum import Enum
-from typing import Any, Union, List
+from typing import Any
 import importlib
 import logging
 import argparse
@@ -11,6 +11,8 @@ import glm
 import moderngl
 import moderngl_window as mglw
 from moderngl_window.opengl.vao import VAO
+from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
+from imgui_bundle import imgui, imgui_ctx
 
 
 logger = logging.getLogger(__name__)
@@ -27,6 +29,7 @@ class App(mglw.WindowConfig):
     gl_version = (3, 3)
     window_size = (960, 540)
     title = "Mesh Visualizer"
+    aspect_ratio = None
 
     # -------------------- Camera Parameters  -------------------- #
 
@@ -38,11 +41,14 @@ class App(mglw.WindowConfig):
     cam_pos = glm.vec3(0, 0, 0)
     cam_rot = glm.quat(0, 0, 0, 1)
     # Camera mode.
-    cam_mode = CameraMode.ORTHOGONAL
+    cam_modes = [CameraMode.ORTHOGONAL, CameraMode.PERSPECTIVE]
+    cam_mode = 0
     cam_near = 0.1
     cam_far = 100
     # Orthogonal parameters.
     cam_orth_scale = 10
+    # Orthogonal parameters.
+    cam_perspective_fov = 90
 
     # --------------------- OpenGL Matrices  --------------------- #
 
@@ -60,6 +66,7 @@ class App(mglw.WindowConfig):
 
     def __init__(self, **kwargs: Any) -> None:
         super().__init__(**kwargs)
+        self.cam_modes_str = [str(mode) for mode in self.cam_modes]
         # Load mesh.
         mesh_file_path: pathlib.Path = self.argv.file
         self.mesh: trimesh.Trimesh = trimesh.load_mesh(
@@ -83,6 +90,9 @@ class App(mglw.WindowConfig):
         self.update_cam_transform()
         self.update_view_mat()
         self.update_perspective_mat()
+        # Imgui renderer.
+        imgui.create_context()
+        self.imgui = ModernglWindowRenderer(self.wnd)
 
     def build_smooth_vertex_data(self, mesh: trimesh.Trimesh):
         """Build smooth vertex data (position and normal) with vbo indexing.
@@ -127,7 +137,7 @@ class App(mglw.WindowConfig):
 
     def update_perspective_mat(self):
         """Update camera intrinsic (perspective matrix)."""
-        if self.cam_mode == CameraMode.ORTHOGONAL:
+        if self.cam_modes[self.cam_mode] == CameraMode.ORTHOGONAL:
             cam_orth_width = self.cam_orth_scale
             cam_orth_height = cam_orth_width / self.wnd.aspect_ratio
             left = -cam_orth_width / 2
@@ -142,34 +152,122 @@ class App(mglw.WindowConfig):
                 self.cam_near,
                 self.cam_far
             )
+        elif self.cam_modes[self.cam_mode] == CameraMode.PERSPECTIVE:
+            fov_y = (self.cam_perspective_fov / 180) * np.pi
+            self.perspective_mat = glm.perspective(
+                fov_y,
+                self.wnd.aspect_ratio,
+                self.cam_near,
+                self.cam_far
+            )
         else:
             logger.error("Camera mode not supported yet.")
 
-    def on_resize(self, width, height):
+    def on_resize(self, width: int, height: int):
         # Update perspective matrix as the aspect_ratio changed.
         self.update_perspective_mat()
+        self.imgui.resize(width, height)
+
+    def on_key_event(self, key, action, modifiers):
+        self.imgui.key_event(key, action, modifiers)
+
+    def on_mouse_position_event(self, x, y, dx, dy):
+        self.imgui.mouse_position_event(x, y, dx, dy)
+
+    def on_mouse_drag_event(self, x, y, dx, dy):
+        self.imgui.mouse_drag_event(x, y, dx, dy)
+
+    def on_mouse_scroll_event(self, x_offset, y_offset):
+        self.imgui.mouse_scroll_event(x_offset, y_offset)
+
+    def on_mouse_press_event(self, x, y, button):
+        self.imgui.mouse_press_event(x, y, button)
+
+    def on_mouse_release_event(self, x: int, y: int, button: int):
+        self.imgui.mouse_release_event(x, y, button)
+
+    def on_unicode_char_entered(self, char):
+        self.imgui.unicode_char_entered(char)
+
+    def gui(self):
+        with imgui_ctx.begin("Mesh Viewer Control"):
+            # -------------------- Camera Extrinsics  -------------------- #
+
+            imgui.separator_text("Camera Extrinsics Control")
+            changed, self.cam_rho = imgui.slider_float(
+                "Camera rho", self.cam_rho, 1, 20)
+            if changed:
+                self.update_cam_transform()
+                self.update_view_mat()
+            changed, self.cam_theta = imgui.slider_float(
+                "Camera theta", self.cam_theta, 0, 2 * np.pi)
+            if changed:
+                self.update_cam_transform()
+                self.update_view_mat()
+            changed, self.cam_phi = imgui.slider_float(
+                "Camera phi", self.cam_phi, 0, np.pi)
+            if changed:
+                self.update_cam_transform()
+                self.update_view_mat()
+
+            # -------------------- Camera Intrinsics  -------------------- #
+
+            imgui.separator_text("Camera Intrinsics Control")
+            changed, self.cam_mode = imgui.combo(
+                "Camera Mode", self.cam_mode, self.cam_modes_str)
+            if changed:
+                self.update_perspective_mat()
+            changed, self.cam_near = imgui.slider_float(
+                "Near Clipping Distance", self.cam_near, 0.001, 1)
+            if changed:
+                self.update_perspective_mat()
+            changed, self.cam_far = imgui.slider_float(
+                "Far Clipping Distance", self.cam_far, 2, 100)
+            if changed:
+                self.update_perspective_mat()
+            if self.cam_modes[self.cam_mode] == CameraMode.ORTHOGONAL:
+                changed, self.cam_orth_scale = imgui.slider_float(
+                    "Orthogonal Scale", self.cam_orth_scale, 1, 20)
+                if changed:
+                    self.update_perspective_mat()
+            elif self.cam_modes[self.cam_mode] == CameraMode.PERSPECTIVE:
+                changed, self.cam_perspective_fov = imgui.slider_float(
+                    "Verticle FOV", self.cam_perspective_fov, 30, 120)
+                if changed:
+                    self.update_perspective_mat()
 
     def on_render(self, time: float, frame_time: float) -> None:
         # Calculate uniforms.
-        mat_MV = self.view_mat @ self.model_mat
+        mat_M = self.model_mat
+        mat_V = self.view_mat
         mat_P = self.perspective_mat
+        mat_MV = mat_V @ mat_M
         mat_MVP = mat_P @ mat_MV
         # Load uniforms.
         if "base_color" in self.program:
             self.program["base_color"].write(
                 np.array([1, 0, 0, 1], dtype="f4").tobytes())
-        if "mat_MV" in self.program:
-            self.program["mat_MV"].write(mat_MV.to_bytes())
+        if "mat_M" in self.program:
+            self.program["mat_M"].write(mat_M.to_bytes())
+        if "mat_V" in self.program:
+            self.program["mat_V"].write(mat_V.to_bytes())
         if "mat_P" in self.program:
             self.program["mat_P"].write(mat_P.to_bytes())
+        if "mat_MV" in self.program:
+            self.program["mat_MV"].write(mat_MV.to_bytes())
         if "mat_MVP" in self.program:
             self.program["mat_MVP"].write(mat_MVP.to_bytes())
         # Clear screen
         self.ctx.clear(0, 0, 0, 1)
         # Z-test.
-        self.ctx.enable(moderngl.DEPTH_TEST)
+        self.ctx.enable(moderngl.DEPTH_TEST | moderngl.CULL_FACE)
         # Render to fbo.
         self.vao.render(self.program)
+        # Render gui.
+        imgui.new_frame()
+        self.gui()
+        imgui.render()
+        self.imgui.render(imgui.get_draw_data())
 
 
 def main():

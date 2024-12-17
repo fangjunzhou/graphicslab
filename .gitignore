@@ -1,4 +1,5 @@
 # Misc
+.DS_Store
 .direnv/
 
 # Python
@@ -6,3 +7,4 @@ __pycache__/
 .virtual_documents
 .ropeproject
 .ipynb_checkpoints
+imgui.ini
