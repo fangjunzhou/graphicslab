@@ -24,6 +24,9 @@ dev = [
     "jupyterlab>=4.3.3",
 ]
 
+[tool.licensecheck]
+using = "PEP631"
+
 [project.scripts]
 start = "moderngl_playground.__main__:main"
 square = "moderngl_playground.demo.square:main"
