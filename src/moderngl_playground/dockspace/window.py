@@ -11,6 +11,7 @@ from imgui_bundle import imgui, imgui_ctx
 from moderngl_playground.window import Window
 from moderngl_playground.about.window import AboutWindow
 from moderngl_playground.settings.settings import Settings
+from moderngl_playground.settings.window import SettingsWindow
 
 
 class Dockspace:
@@ -25,6 +26,7 @@ class Dockspace:
 
     # Menu states.
     show_about: bool = False
+    show_settings: bool = False
 
     # Frametime buffer.
     FRAME_RATE_DSP_FREQ = 10
@@ -56,14 +58,29 @@ class Dockspace:
         # ------------------------- Menu Bar ------------------------- #
 
         with imgui_ctx.begin_main_menu_bar():
+            if imgui.begin_menu("File"):
+                # Settings.
+                changed, self.show_settings = imgui.menu_item(
+                    "Settings", "", self.show_settings)
+                if changed:
+                    def close():
+                        self.show_settings = False
+                        self.remove_window("settings")
+                    if self.show_settings:
+                        self.add_window(
+                            "settings", SettingsWindow(close, self.settings))
+                    else:
+                        self.remove_window("settings")
+                imgui.end_menu()
+            # About
             changed, self.show_about = imgui.menu_item(
                 "About", "", self.show_about)
             if changed:
-                def close_about():
+                def close():
                     self.show_about = False
                     self.remove_window("about")
                 if self.show_about:
-                    self.add_window("about", AboutWindow(close_about))
+                    self.add_window("about", AboutWindow(close))
                 else:
                     self.remove_window("about")
 

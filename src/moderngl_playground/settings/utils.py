@@ -7,11 +7,12 @@ from moderngl_playground.settings.settings import Settings
 
 logger = logging.getLogger(__name__)
 
+config_dir = pathlib.Path(user_config_dir("moderngl-playground"))
+
 
 def load_settings() -> Settings:
     """Load settings from config file"""
-    config_path = pathlib.Path(user_config_dir(
-        "moderngl-playground")) / "config.json"
+    config_path = config_dir / "config.json"
     if not config_path.exists():
         logger.info("Config not exist, creating the default config.")
         settings = Settings()
@@ -25,8 +26,6 @@ def load_settings() -> Settings:
 
 
 def save_settings(settings: Settings):
-    config_dir = pathlib.Path(user_config_dir(
-        "moderngl-playground"))
     if not config_dir.exists():
         logger.info(
             f"Config directory {config_dir} doesn't exist, creating for the first time.")
