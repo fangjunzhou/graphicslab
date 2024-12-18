@@ -1,5 +1,8 @@
+from moderngl_playground import app
+
+
 def main():
-    print("Hello from moderngl-playground!")
+    app.App.run()
 
 
 if __name__ == "__main__":
