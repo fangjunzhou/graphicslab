@@ -14,7 +14,7 @@ class AboutWindow(Window):
     def __init__(self, close_window: Callable[[], None]):
         self.close_window = close_window
 
-    def render(self):
+    def render(self, time: float, frametime: float):
         with imgui_ctx.begin("About", True) as (expanded, opened):
             if not opened:
                 self.close_window()

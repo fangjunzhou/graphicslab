@@ -5,6 +5,8 @@ description = "A playground project for python moderngl library"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "appdirs>=1.4.4",
+    "dataclasses-json>=0.6.7",
     "imgui-bundle>=1.6.1",
     "moderngl-window[imgui]>=3.0.3",
     "moderngl>=5.12.0",

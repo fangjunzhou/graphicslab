@@ -10,11 +10,12 @@ import importlib.resources
 
 import moderngl_window as mglw
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
-from imgui_bundle import imgui, imgui_ctx
+from imgui_bundle import imgui
 
 from moderngl_playground.window import Window
 from moderngl_playground.dockspace.window import Dockspace
-from moderngl_playground.about.window import AboutWindow
+from moderngl_playground.settings.settings import Settings
+from moderngl_playground.settings.utils import load_settings
 
 
 class App(mglw.WindowConfig):
@@ -29,6 +30,8 @@ class App(mglw.WindowConfig):
     io: imgui.IO
     imgui_renderer: ModernglWindowRenderer
     default_font: imgui.ImFont
+
+    settings: Settings
 
     # Dockspace
     dockspace: Dockspace
@@ -57,6 +60,8 @@ class App(mglw.WindowConfig):
         self.logger = logging.getLogger(__name__)
         self.logger.info("WindowConfig initialized.")
         self.logger.info(f"Current OpenGL version: {self.gl_version}")
+        # Load settings.
+        self.settings = load_settings()
         # Initialize ImGui
         imgui.create_context()
         self.io = imgui.get_io()
@@ -80,7 +85,8 @@ class App(mglw.WindowConfig):
             self.wnd,
             self.io,
             self.add_window,
-            self.remove_window
+            self.remove_window,
+            self.settings
         )
 
     @classmethod
@@ -135,10 +141,10 @@ class App(mglw.WindowConfig):
         self.windows_remove_queue = []
 
         # Render Dockspace.
-        self.dockspace.render()
+        self.dockspace.render(time, frametime)
         # Render windows.
         for window in self.windows.values():
-            window.render()
+            window.render(time, frametime)
 
         for key in self.windows_remove_queue:
             del self.windows[key]
