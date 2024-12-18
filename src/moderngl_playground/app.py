@@ -2,14 +2,18 @@
 App window class.
 """
 
+from typing import Dict
+from collections import deque
 import argparse
 import logging
 import importlib.resources
 
 import moderngl_window as mglw
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
-from imgui_bundle import imgui
+from imgui_bundle import imgui, imgui_ctx
 
+from moderngl_playground.window import Window
+from moderngl_playground.dockspace.window import Dockspace
 from moderngl_playground.about.window import AboutWindow
 
 
@@ -25,7 +29,12 @@ class App(mglw.WindowConfig):
     io: imgui.IO
     imgui_renderer: ModernglWindowRenderer
     default_font: imgui.ImFont
-    about_window: AboutWindow
+
+    # Dockspace
+    dockspace: Dockspace
+    # App windows.
+    windows: Dict[str, Window] = {}
+    windows_remove_queue: deque = []
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
@@ -51,6 +60,9 @@ class App(mglw.WindowConfig):
         # Initialize ImGui
         imgui.create_context()
         self.io = imgui.get_io()
+        self.io.set_ini_filename("")
+        self.io.set_log_filename("")
+        # Initialize renderer.
         self.imgui_renderer = ModernglWindowRenderer(self.wnd)
         self.logger.info("ImGui initialized.")
         # Load font.
@@ -63,8 +75,13 @@ class App(mglw.WindowConfig):
             16
         )
         self.imgui_renderer.refresh_font_texture()
-        # Initialize about windows.
-        self.about_window = AboutWindow()
+        # Initialize dockspace.
+        self.dockspace = Dockspace(
+            self.wnd,
+            self.io,
+            self.add_window,
+            self.remove_window
+        )
 
     @classmethod
     def add_arguments(cls, parser: argparse.ArgumentParser):
@@ -75,6 +92,16 @@ class App(mglw.WindowConfig):
             default="WARN",
             type=str
         )
+
+    def add_window(self, key: str, window: Window):
+        if key in self.windows:
+            raise KeyError(f"Window {key} exists in the window list.")
+        self.windows[key] = window
+
+    def remove_window(self, key: str):
+        if key not in self.windows:
+            raise KeyError(f"Window {key} doesn't exist.")
+        self.windows_remove_queue.append(key)
 
     def on_resize(self, width: int, height: int):
         self.imgui_renderer.resize(width, height)
@@ -105,8 +132,16 @@ class App(mglw.WindowConfig):
         imgui.new_frame()
         imgui.push_font(self.default_font)
 
-        # Render ImGui windows.
-        self.about_window.render()
+        self.windows_remove_queue = []
+
+        # Render Dockspace.
+        self.dockspace.render()
+        # Render windows.
+        for window in self.windows.values():
+            window.render()
+
+        for key in self.windows_remove_queue:
+            del self.windows[key]
 
         imgui.pop_font()
         # ImGui render cycles end.

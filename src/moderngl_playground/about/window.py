@@ -2,20 +2,20 @@
 ImGui window for about page.
 """
 
+from typing import Callable
+
 from imgui_bundle import imgui, imgui_ctx
+from moderngl_playground.window import Window
 
 
-class AboutWindow:
-    window_open: bool
+class AboutWindow(Window):
+    close_window: Callable[[], None]
 
-    def __init__(self):
-        self.window_open = True
-
-    def open(self):
-        self.window_open = True
+    def __init__(self, close_window: Callable[[], None]):
+        self.close_window = close_window
 
     def render(self):
-        if self.window_open:
-            with imgui_ctx.begin("About", self.window_open) as (expanded, opened):
-                self.window_open = opened
-                imgui.text("Hello ModernGL Playground!")
+        with imgui_ctx.begin("About", True) as (expanded, opened):
+            if not opened:
+                self.close_window()
+            imgui.text("Hello ModernGL Playground!")
