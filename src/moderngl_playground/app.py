@@ -2,13 +2,13 @@
 App window class.
 """
 
-from typing import Dict
+from typing import Deque, Dict
 from collections import deque
 import argparse
 import logging
 import importlib.resources
 
-import moderngl_window as mglw
+from moderngl_window.context.base import WindowConfig
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
 from imgui_bundle import imgui
 
@@ -18,7 +18,7 @@ from moderngl_playground.settings.settings import Settings
 from moderngl_playground.settings.utils import load_settings
 
 
-class App(mglw.WindowConfig):
+class App(WindowConfig):
     # ---------------------- Window Config  ---------------------- #
 
     title = "ModernGL Playground"
@@ -37,22 +37,23 @@ class App(mglw.WindowConfig):
     dockspace: Dockspace
     # App windows.
     windows: Dict[str, Window] = {}
-    windows_remove_queue: deque = []
+    windows_remove_queue: Deque[str] = deque()
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         # Initialize logging.
-        log_level_arg: str = self.argv.log
-        if log_level_arg == "INFO":
-            self.log_level = logging.INFO
-        elif log_level_arg == "WARN":
-            self.log_level = logging.WARN
-        elif log_level_arg == "DEBUG":
-            self.log_level = logging.DEBUG
-        elif log_level_arg == "ERROR":
-            self.log_level = logging.ERROR
-        else:
-            raise ValueError(f"Log level {log_level_arg} doesn't exist.")
+        if self.argv:
+            log_level_arg: str = self.argv.log
+            if log_level_arg == "INFO":
+                self.log_level = logging.INFO
+            elif log_level_arg == "WARN":
+                self.log_level = logging.WARN
+            elif log_level_arg == "DEBUG":
+                self.log_level = logging.DEBUG
+            elif log_level_arg == "ERROR":
+                self.log_level = logging.ERROR
+            else:
+                raise ValueError(f"Log level {log_level_arg} doesn't exist.")
         logging.basicConfig(
             level=self.log_level,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -133,18 +134,18 @@ class App(mglw.WindowConfig):
     def on_unicode_char_entered(self, char):
         self.imgui_renderer.unicode_char_entered(char)
 
-    def on_render(self, time: float, frametime: float):
+    def on_render(self, time: float, frame_time: float):
         # ImGui render cycle start.
         imgui.new_frame()
         imgui.push_font(self.default_font)
 
-        self.windows_remove_queue = []
+        self.windows_remove_queue = deque()
 
         # Render Dockspace.
-        self.dockspace.render(time, frametime)
+        self.dockspace.render(time, frame_time)
         # Render windows.
         for window in self.windows.values():
-            window.render(time, frametime)
+            window.render(time, frame_time)
 
         for key in self.windows_remove_queue:
             del self.windows[key]

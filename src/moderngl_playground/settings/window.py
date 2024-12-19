@@ -14,7 +14,7 @@ class SettingsWindow(Window):
         super().__init__(close_window)
         self.settings: Settings = settings
 
-    def render(self, time, frametime):
+    def render(self, time: float, frame_time: float):
         with imgui_ctx.begin("Settings", True) as (expanded, opened):
             if not opened:
                 self.close_window()

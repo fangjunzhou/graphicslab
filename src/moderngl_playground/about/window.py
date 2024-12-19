@@ -15,7 +15,7 @@ class AboutWindow(Window):
         super().__init__(close_window)
         self.config_dir = config_dir
 
-    def render(self, time: float, frametime: float):
+    def render(self, time: float, frame_time: float):
         with imgui_ctx.begin("About", True) as (expanded, opened):
             if not opened:
                 self.close_window()

@@ -1,3 +1,5 @@
+from typing import Callable
+
 from abc import ABC, abstractmethod
 
 
@@ -9,5 +11,5 @@ class Window(ABC):
         self.close_window = close_window
 
     @abstractmethod
-    def render(self, time: float, frametime: float):
+    def render(self, time: float, frame_time: float):
         raise NotImplementedError("Method not implement")
