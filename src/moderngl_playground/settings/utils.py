@@ -32,6 +32,6 @@ def save_settings(settings: Settings):
             f"Config directory {config_dir} doesn't exist, creating for the first time.")
         config_dir.mkdir(parents=True)
     config_path = config_dir / "config.json"
-    config_json: str = settings.to_json()
+    config_json: str = settings.to_json(indent=2)
     with open(config_path, "w") as config_file:
         config_file.write(config_json)
