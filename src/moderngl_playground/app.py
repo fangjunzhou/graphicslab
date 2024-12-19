@@ -14,7 +14,7 @@ from imgui_bundle import imgui
 
 from moderngl_playground.window import Window
 from moderngl_playground.dockspace.window import Dockspace
-from moderngl_playground.settings.settings import Settings
+from moderngl_playground.settings.settings import SettingsState
 from moderngl_playground.settings.utils import load_settings
 
 
@@ -31,7 +31,7 @@ class App(WindowConfig):
     imgui_renderer: ModernglWindowRenderer
     default_font: imgui.ImFont
 
-    settings: Settings
+    settings_state: SettingsState = SettingsState()
 
     # Dockspace
     dockspace: Dockspace
@@ -62,7 +62,7 @@ class App(WindowConfig):
         self.logger.info("WindowConfig initialized.")
         self.logger.info(f"Current OpenGL version: {self.gl_version}")
         # Load settings.
-        self.settings = load_settings()
+        self.settings_state.value = load_settings()
         # Initialize ImGui
         imgui.create_context()
         self.io = imgui.get_io()
@@ -87,7 +87,7 @@ class App(WindowConfig):
             self.io,
             self.add_window,
             self.remove_window,
-            self.settings
+            self.settings_state
         )
 
     @classmethod

@@ -12,7 +12,7 @@ from imgui_bundle import imgui, imgui_ctx
 from moderngl_playground.mesh_viewer.window import MeshViewerWindow
 from moderngl_playground.window import Window
 from moderngl_playground.about.window import AboutWindow
-from moderngl_playground.settings.settings import Settings
+from moderngl_playground.settings.settings import SettingsObserver, SettingsState
 from moderngl_playground.settings.window import SettingsWindow
 
 
@@ -27,7 +27,8 @@ class Dockspace:
     remove_window: Callable[[str], None]
 
     # App settings.
-    settings: Settings
+    settings_state: SettingsState
+    settings_observer: SettingsObserver = SettingsObserver()
 
     # Menu states.
     # File
@@ -51,12 +52,14 @@ class Dockspace:
         io: imgui.IO,
         add_window: Callable[[str, Window], None],
         remove_window: Callable[[str], None],
-        settings: Settings
+        settings: SettingsState
     ):
         self.wnd = wnd
         self.add_window = add_window
         self.remove_window = remove_window
-        self.settings = settings
+        self.settings_state = settings
+        settings.attach(self.settings_observer)
+        self.settings_observer.update(settings.value)
         # Enable docking.
         io.config_flags |= imgui.ConfigFlags_.docking_enable.value
         # Init frametime buffer.
@@ -79,7 +82,7 @@ class Dockspace:
                         self.remove_window("settings")
                     if self.show_settings:
                         self.add_window(
-                            "settings", SettingsWindow(close, self.settings))
+                            "settings", SettingsWindow(close, self.settings_state))
                     else:
                         self.remove_window("settings")
                 imgui.end_menu()
@@ -148,7 +151,7 @@ class Dockspace:
         with imgui_ctx.begin("Status Bar", True, window_flags):
             with imgui_ctx.begin_menu_bar():
                 imgui.text("Status: DONE!")
-                if self.settings.interface_settings.show_fps_counter:
+                if self.settings_observer.value.interface_settings.show_fps_counter:
                     self.frame_time_buf[self.frame_time_buf_idx] = frame_time
                     self.frame_time_buf_idx = (
                         self.frame_time_buf_idx + 1) % self.FRAME_TIME_BUF_SIZE

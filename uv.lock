@@ -964,6 +964,7 @@ dependencies = [
     { name = "moderngl-window", extra = ["imgui"] },
     { name = "numpy" },
     { name = "pillow" },
+    { name = "py-observer" },
     { name = "pyglm" },
     { name = "trimesh", extra = ["easy"] },
 ]
@@ -984,6 +985,7 @@ requires-dist = [
     { name = "moderngl-window", extras = ["imgui"], specifier = ">=3.0.3" },
     { name = "numpy", specifier = ">=2.2.0" },
     { name = "pillow", specifier = ">=11.0.0" },
+    { name = "py-observer", git = "https://github.com/fangjunzhou/python-observer" },
     { name = "pyglm", specifier = ">=2.7.3" },
     { name = "trimesh", extras = ["easy"], specifier = ">=4.5.3" },
 ]
@@ -1306,6 +1308,11 @@ sdist = { url = "https://files.pythonhosted.org/packages/cd/05/0a34433a064256a57
 wheels = [
     { url = "https://files.pythonhosted.org/packages/8e/37/efad0257dc6e593a18957422533ff0f87ede7c9c6ea010a2177d738fb82f/pure_eval-0.2.3-py3-none-any.whl", hash = "sha256:1db8e35b67b3d218d818ae653e27f06c3aa420901fa7b081ca98cbedc874e0d0", size = 11842 },
 ]
+
+[[package]]
+name = "py-observer"
+version = "1.0.0"
+source = { git = "https://github.com/fangjunzhou/python-observer#fe92330cf27cd7967b235748e8d42b317200c28a" }
 
 [[package]]
 name = "pycodestyle"
