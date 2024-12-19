@@ -5,6 +5,8 @@ Dockspace window.
 from typing import Callable
 import logging
 
+from moderngl import Context
+from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
 import numpy as np
 from moderngl_window.context.base.window import BaseWindow
 from imgui_bundle import imgui, imgui_ctx
@@ -21,6 +23,8 @@ logger = logging.getLogger(__name__)
 
 class Dockspace:
     wnd: BaseWindow
+    ctx: Context
+    imgui_renderer: ModernglWindowRenderer
 
     # Add window and remove window callback.
     add_window: Callable[[str, Window], None]
@@ -49,12 +53,16 @@ class Dockspace:
     def __init__(
         self,
         wnd: BaseWindow,
+        ctx: Context,
+        imgui_renderer: ModernglWindowRenderer,
         io: imgui.IO,
         add_window: Callable[[str, Window], None],
         remove_window: Callable[[str], None],
         settings: SettingsState
     ):
         self.wnd = wnd
+        self.ctx = ctx
+        self.imgui_renderer = imgui_renderer
         self.add_window = add_window
         self.remove_window = remove_window
         self.settings_state = settings
@@ -99,7 +107,7 @@ class Dockspace:
                         self.remove_window("mesh_viewer")
                     if self.show_mesh_viewer:
                         self.add_window(
-                            "mesh_viewer", MeshViewerWindow(close))
+                            "mesh_viewer", MeshViewerWindow(close, self.ctx, self.imgui_renderer))
                     else:
                         self.remove_window("mesh_viewer")
                 imgui.end_menu()

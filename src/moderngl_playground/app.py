@@ -12,6 +12,7 @@ from moderngl_window.context.base import WindowConfig
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
 from imgui_bundle import imgui
 
+from moderngl_playground.fbo_stack import fbo_stack
 from moderngl_playground.window import Window
 from moderngl_playground.dockspace.window import Dockspace
 from moderngl_playground.settings.settings import SettingsState
@@ -71,6 +72,8 @@ class App(WindowConfig):
         # Initialize renderer.
         self.imgui_renderer = ModernglWindowRenderer(self.wnd)
         self.logger.info("ImGui initialized.")
+        # Initialize FBO stack.
+        fbo_stack.push(self.wnd.fbo)
         # Load font.
         module_path = importlib.resources.files(__package__)
         font_path = module_path / "assets" / "fonts" / \
@@ -84,6 +87,8 @@ class App(WindowConfig):
         # Initialize dockspace.
         self.dockspace = Dockspace(
             self.wnd,
+            self.ctx,
+            self.imgui_renderer,
             self.io,
             self.add_window,
             self.remove_window,
