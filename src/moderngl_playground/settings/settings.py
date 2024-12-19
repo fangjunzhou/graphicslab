@@ -1,19 +1,17 @@
 from dataclasses import dataclass
-from dataclasses_json import dataclass_json
+from dataclasses_json import DataClassJsonMixin
 from dataclasses import field
 
 from observer.observer import Observable, Observer
 
 
-@dataclass_json
 @dataclass
-class InterfaceSettings:
+class InterfaceSettings(DataClassJsonMixin):
     show_fps_counter: bool = False
 
 
-@dataclass_json
 @dataclass
-class Settings:
+class Settings(DataClassJsonMixin):
     interface_settings: InterfaceSettings = field(
         default_factory=lambda: InterfaceSettings())
 

@@ -1,5 +1,6 @@
 import pathlib
 import logging
+from typing import List
 
 from platformdirs import user_config_dir
 from moderngl_playground.settings.settings import Settings
@@ -22,7 +23,7 @@ def load_settings() -> Settings:
         with open(config_path, "r") as config_file:
             config_json = config_file.read()
             settings = Settings.schema().loads(config_json)
-    return settings
+    return settings  # type: ignore
 
 
 def save_settings(settings: Settings):

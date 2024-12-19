@@ -34,6 +34,11 @@ class SettingsWindow(Window):
                         self.unsaved_settings)
                     self.unsave = False
 
+                clicked, _ = imgui.menu_item("Reset to Default", "", False)
+                if clicked:
+                    self.unsaved_settings = Settings()
+                    self.unsave = True
+
             # -------------------- Interface Settings -------------------- #
 
             imgui.separator_text("Interface Settings")
