@@ -8,12 +8,10 @@ from moderngl_playground.settings.utils import save_settings
 
 
 class SettingsWindow(Window):
-    close_window: Callable[[], None]
-
     settings: Settings
 
     def __init__(self, close_window: Callable[[], None], settings: Settings):
-        self.close_window = close_window
+        super().__init__(close_window)
         self.settings: Settings = settings
 
     def render(self, time, frametime):

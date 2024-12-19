@@ -11,10 +11,8 @@ from moderngl_playground.settings.utils import config_dir
 
 
 class AboutWindow(Window):
-    close_window: Callable[[], None]
-
     def __init__(self, close_window: Callable[[], None]):
-        self.close_window = close_window
+        super().__init__(close_window)
         self.config_dir = config_dir
 
     def render(self, time: float, frametime: float):
