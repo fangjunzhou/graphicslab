@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from dataclasses_json import DataClassJsonMixin
 from dataclasses import field
+import copy
 
 from observer.observer import Observable, Observer
 
@@ -41,7 +42,7 @@ class SettingsObserver(Observer):
         new_state = new_state[0]
         if type(new_state) is not Settings:
             raise ValueError("Expected state type for settings.")
-        self._value = new_state
+        self._value = copy.deepcopy(new_state)
 
     @property
     def value(self):
