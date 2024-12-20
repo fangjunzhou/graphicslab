@@ -11,6 +11,7 @@ import numpy as np
 from moderngl_window.context.base.window import BaseWindow
 from imgui_bundle import imgui, imgui_ctx
 
+from graphicslab.dockspace.status import StatusObserver, StatusState
 from graphicslab.mesh_viewer.window import MeshViewerWindow
 from graphicslab.window import Window
 from graphicslab.about.window import AboutWindow
@@ -34,6 +35,10 @@ class Dockspace:
     # App settings.
     settings_state: SettingsState
     settings_observer: SettingsObserver = SettingsObserver()
+
+    # App status.
+    status_state: StatusState = StatusState()
+    status_observer: StatusObserver = StatusObserver()
 
     # Menu states.
     # File
@@ -70,6 +75,7 @@ class Dockspace:
         self.settings_state = settings
         settings.attach(self.settings_observer)
         self.settings_observer.update(settings.value)
+        self.status_state.attach(self.status_observer)
         # Enable docking.
         io.config_flags |= imgui.ConfigFlags_.docking_enable.value
         # Init frametime buffer.
@@ -87,7 +93,8 @@ class Dockspace:
                 self.ctx,
                 self.imgui_renderer,
                 self.io,
-                self.settings_state
+                self.settings_state,
+                self.status_state
             )
         )
         self.show_mesh_viewer = True
@@ -132,7 +139,8 @@ class Dockspace:
                                 self.ctx,
                                 self.imgui_renderer,
                                 self.io,
-                                self.settings_state
+                                self.settings_state,
+                                self.status_state
                             )
                         )
                     else:
@@ -199,7 +207,14 @@ class Dockspace:
                         imgui.WindowFlags_.no_background.value)
         with imgui_ctx.begin("Status Bar", True, window_flags):
             with imgui_ctx.begin_menu_bar():
-                imgui.text("Status: DONE!")
+                imgui.push_item_width(100)
+                num_jobs = len(self.status_observer.value)
+                if num_jobs == 0:
+                    imgui.menu_item("Status: ALL DONE", "", False)
+                else:
+                    imgui.menu_item(
+                        f"Status: {num_jobs} jobs working", "", False)
+                imgui.pop_item_width()
                 if self.settings_observer.value.interface_settings.show_fps_counter:
                     self.frame_time_buf[self.frame_time_buf_idx] = frame_time
                     self.frame_time_buf_idx = (

@@ -12,6 +12,7 @@ import trimesh
 import moderngl
 from graphicslab.camera import CameraMode
 from graphicslab.consts import assets_path
+from graphicslab.dockspace.status import StatusState
 from graphicslab.lib.mesh_loader import MeshLoader
 from graphicslab.settings.settings import SettingsObserver, SettingsState
 from graphicslab.window import Window
@@ -36,6 +37,7 @@ class MeshViewerWindow(Window):
     io: imgui.IO
     settings_state: SettingsState
     settings_observer: SettingsObserver
+    status_state: StatusState
 
     viewport_size: Tuple[int, int] = (0, 0)
     viewport_aspect: float = 1
@@ -87,7 +89,8 @@ class MeshViewerWindow(Window):
         ctx: moderngl.Context,
         imgui_renderer: ModernglWindowRenderer,
         io: imgui.IO,
-        settings_state: SettingsState
+        settings_state: SettingsState,
+        status_state: StatusState
     ):
         super().__init__(close_window)
         # Initialize moderngl.
@@ -96,6 +99,7 @@ class MeshViewerWindow(Window):
         self.io = io
         self.settings_state = settings_state
         self.settings_observer = SettingsObserver()
+        self.status_state = status_state
         self.settings_state.attach(self.settings_observer)
         self.render_texture = self.ctx.texture((16, 16), 3)
         self.depth_buffer = self.ctx.depth_renderbuffer((16, 16))
@@ -135,6 +139,7 @@ class MeshViewerWindow(Window):
         )
         self.ibo = self.ctx.buffer(self.mesh_loader.index_buf)
         self.assemble_vao()
+        self.status_state.finish_status("Mesh Viewer")
 
     def load_shader(self, shader_name: str):
         """Load shader.
@@ -399,6 +404,9 @@ class MeshViewerWindow(Window):
                     else:
                         mesh_file_path = mesh_file_paths[0]
                         logger.info(f"Selected mesh file {mesh_file_path}.")
+                        self.status_state.update_status(
+                            "Mesh Viewer", "Loading Mesh"
+                        )
                         threading.Thread(
                             target=self.mesh_loader.load,
                             args=[mesh_file_path]
