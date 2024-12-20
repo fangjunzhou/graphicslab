@@ -64,6 +64,9 @@ class App(WindowConfig):
         self.logger.info(f"Current OpenGL version: {self.gl_version}")
         # Load settings.
         self.settings_state.value = load_settings()
+        # Initialize ModernGL context.
+        self.ctx.gc_mode = "auto"
+        self.logger.info(f"Using gc_mode: {self.ctx.gc_mode}")
         # Initialize ImGui
         imgui.create_context()
         self.io = imgui.get_io()
