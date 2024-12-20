@@ -74,6 +74,16 @@ class Dockspace:
         self.frame_time_buf = np.ones((self.FRAME_TIME_BUF_SIZE,))
         self.frame_time_buf_idx = 0
 
+        # Load mesh view window.
+        def close_mesh_view():
+            self.show_mesh_viewer = False
+            self.remove_window("mesh_viewer")
+        self.add_window(
+            "mesh_viewer",
+            MeshViewerWindow(close_mesh_view, self.ctx, self.imgui_renderer)
+        )
+        self.show_mesh_viewer = True
+
     def render(self, time: float, frame_time: float):
         # ------------------------- Menu Bar ------------------------- #
 

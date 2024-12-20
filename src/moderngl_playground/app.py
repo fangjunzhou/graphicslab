@@ -6,12 +6,12 @@ from typing import Deque, Dict
 from collections import deque
 import argparse
 import logging
-import importlib.resources
 
 from moderngl_window.context.base import WindowConfig
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
 from imgui_bundle import imgui
 
+from moderngl_playground.consts import assets_path
 from moderngl_playground.fbo_stack import fbo_stack
 from moderngl_playground.window import Window
 from moderngl_playground.dockspace.window import Dockspace
@@ -80,8 +80,7 @@ class App(WindowConfig):
         # Initialize FBO stack.
         fbo_stack.push(self.wnd.fbo)
         # Load font.
-        module_path = importlib.resources.files(__package__)
-        font_path = module_path / "assets" / "fonts" / \
+        font_path = assets_path / "fonts" / \
             "JetBrainsMono" / "JetBrainsMonoNerdFont-Regular.ttf"
         logger.info(f"Loading font from {font_path}")
         self.default_font = self.io.fonts.add_font_from_file_ttf(
