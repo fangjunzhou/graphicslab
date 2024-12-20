@@ -47,3 +47,12 @@ class SettingsWindow(Window):
                 "Show FPS Counter", self.unsaved_settings.interface_settings.show_fps_counter)
             if changed:
                 self.unsave = True
+
+            changed, self.unsaved_settings.interface_settings.viewport_mouse_sensitivity = imgui.slider_float(
+                "Viewport Mouse Sensitivity",
+                self.unsaved_settings.interface_settings.viewport_mouse_sensitivity,
+                0.1, 10,
+                flags=imgui.SliderFlags_.logarithmic.value
+            )
+            if changed:
+                self.unsave = True

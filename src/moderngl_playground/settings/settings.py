@@ -8,6 +8,7 @@ from observer.observer import Observable, Observer
 @dataclass
 class InterfaceSettings(DataClassJsonMixin):
     show_fps_counter: bool = False
+    viewport_mouse_sensitivity: float = 1
 
 
 @dataclass

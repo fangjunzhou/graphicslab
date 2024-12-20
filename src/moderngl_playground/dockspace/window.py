@@ -23,6 +23,7 @@ logger = logging.getLogger(__name__)
 
 class Dockspace:
     wnd: BaseWindow
+    io: imgui.IO
     ctx: Context
     imgui_renderer: ModernglWindowRenderer
 
@@ -61,6 +62,7 @@ class Dockspace:
         settings: SettingsState
     ):
         self.wnd = wnd
+        self.io = io
         self.ctx = ctx
         self.imgui_renderer = imgui_renderer
         self.add_window = add_window
@@ -80,9 +82,18 @@ class Dockspace:
             self.remove_window("mesh_viewer")
         self.add_window(
             "mesh_viewer",
-            MeshViewerWindow(close_mesh_view, self.ctx, self.imgui_renderer)
+            MeshViewerWindow(
+                close_mesh_view,
+                self.ctx,
+                self.imgui_renderer,
+                self.io,
+                self.settings_state
+            )
         )
         self.show_mesh_viewer = True
+
+    def __del__(self):
+        self.settings_state.detach(self.settings_observer)
 
     def render(self, time: float, frame_time: float):
         # ------------------------- Menu Bar ------------------------- #
@@ -108,7 +119,6 @@ class Dockspace:
             # -------------------------- Views  -------------------------- #
 
             if imgui.begin_menu("Views"):
-                # Settings.
                 changed, self.show_mesh_viewer = imgui.menu_item(
                     "Mesh Viewer", "", self.show_mesh_viewer)
                 if changed:
@@ -117,7 +127,14 @@ class Dockspace:
                         self.remove_window("mesh_viewer")
                     if self.show_mesh_viewer:
                         self.add_window(
-                            "mesh_viewer", MeshViewerWindow(close, self.ctx, self.imgui_renderer))
+                            "mesh_viewer", MeshViewerWindow(
+                                close,
+                                self.ctx,
+                                self.imgui_renderer,
+                                self.io,
+                                self.settings_state
+                            )
+                        )
                     else:
                         self.remove_window("mesh_viewer")
                 imgui.end_menu()

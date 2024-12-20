@@ -11,6 +11,7 @@ import trimesh
 import moderngl
 from moderngl_playground.camera import CameraMode
 from moderngl_playground.consts import assets_path
+from moderngl_playground.settings.settings import SettingsObserver, SettingsState
 from moderngl_playground.window import Window
 from moderngl_playground.fbo_stack import fbo_stack
 
@@ -30,6 +31,10 @@ logger = logging.getLogger(__name__)
 
 
 class MeshViewerWindow(Window):
+    io: imgui.IO
+    settings_state: SettingsState
+    settings_observer: SettingsObserver
+
     viewport_size: Tuple[int, int] = (0, 0)
     viewport_aspect: float = 1
     # OpenGL render target.
@@ -47,13 +52,13 @@ class MeshViewerWindow(Window):
     vao: moderngl.VertexArray
 
     # Camera parameters.
-    rho: float = 8
+    rho: float = 3
     theta: float = np.pi / 2
     phi: float = np.pi / 4
     # Camera mode.
     cam_modes = [CameraMode.ORTHOGONAL, CameraMode.PERSPECTIVE]
     cam_modes_str = [str(mode) for mode in cam_modes]
-    cam_mode_idx = 0
+    cam_mode_idx = 1
     cam_near = 0.1
     cam_far = 100
     # Orthogonal parameters.
@@ -68,20 +73,27 @@ class MeshViewerWindow(Window):
 
     # ImGui states.
     mesh_file_dialog: portable_file_dialogs.open_file | None = None
-    show_cam_control: bool = True
+    show_cam_control: bool = False
     avail_shaders = list(shaders.keys())
     shader_idx = 0
+    scroll_sensitivity = 1
 
     def __init__(
         self,
         close_window: Callable[[], None],
         ctx: moderngl.Context,
         imgui_renderer: ModernglWindowRenderer,
+        io: imgui.IO,
+        settings_state: SettingsState
     ):
         super().__init__(close_window)
         # Initialize moderngl.
         self.ctx = ctx
         self.imgui_renderer = imgui_renderer
+        self.io = io
+        self.settings_state = settings_state
+        self.settings_observer = SettingsObserver()
+        self.settings_state.attach(self.settings_observer)
         self.render_texture = self.ctx.texture((16, 16), 3)
         self.depth_buffer = self.ctx.depth_renderbuffer((16, 16))
         self.imgui_renderer.register_texture(self.render_texture)
@@ -96,6 +108,9 @@ class MeshViewerWindow(Window):
         # Initialize viewport matrices.
         self.update_view_mat(*self.get_cam_transform())
         self.update_perspective_mat()
+
+    def __del__(self):
+        self.settings_state.detach(self.settings_observer)
 
     def load_mesh(self, mesh_path: str):
         logger.info(f"Loading mesh from {mesh_path}")
@@ -305,6 +320,11 @@ class MeshViewerWindow(Window):
                 )
                 if changed:
                     self.update_view_mat(*self.get_cam_transform())
+                _, self.scroll_sensitivity = imgui.slider_float(
+                    "Zoom Scroll Sensitivity",
+                    self.scroll_sensitivity,
+                    0.1, 10
+                )
                 changed, self.theta = imgui.drag_float(
                     "Camera Rotation-XY (theta)",
                     self.theta,
@@ -395,6 +415,7 @@ class MeshViewerWindow(Window):
                 imgui.pop_item_width()
 
             # Viewport size.
+            x, y = imgui.get_cursor_pos()
             w, h = imgui.get_content_region_avail()
             new_viewport_size = (int(w), int(h))
             if w > 0 and h > 0 and self.viewport_size != new_viewport_size:
@@ -410,3 +431,26 @@ class MeshViewerWindow(Window):
                 (0, 1),
                 (1, 0)
             )
+            # Viewport interaction.
+            imgui.set_cursor_pos((x, y))
+            imgui.invisible_button(
+                "viewport_interaction_btn",
+                (w, h)
+            )
+            if imgui.is_item_hovered():
+                mouse_delta = self.io.mouse_delta
+                # Move camera with middle mouse.
+                if imgui.is_key_down(imgui.Key.mouse_middle):
+                    mouse_sensitivity = self.settings_observer.value.interface_settings.viewport_mouse_sensitivity
+                    self.theta -= mouse_delta.x / 100 * mouse_sensitivity
+                    self.theta = (self.theta + np.pi) % (2 * np.pi) - np.pi
+                    self.phi -= mouse_delta.y / 100 * mouse_sensitivity
+                    self.phi = (self.phi + np.pi) % (2 * np.pi) - \
+                        np.pi  # let phi in [-pi, pi]
+                    self.update_view_mat(*self.get_cam_transform())
+                scroll = self.io.mouse_wheel
+                if scroll != 0:
+                    self.rho += scroll / 100 * \
+                        abs(self.rho) * self.scroll_sensitivity
+                    self.rho = glm.vec1(glm.clamp(self.rho, 1.0, 20.0)).x
+                    self.update_view_mat(*self.get_cam_transform())
