@@ -1,3 +1,4 @@
+import threading
 from typing import Callable, List, Tuple
 
 import pathlib
@@ -11,6 +12,7 @@ import trimesh
 import moderngl
 from graphicslab.camera import CameraMode
 from graphicslab.consts import assets_path
+from graphicslab.lib.mesh_loader import MeshLoader
 from graphicslab.settings.settings import SettingsObserver, SettingsState
 from graphicslab.window import Window
 from graphicslab.fbo_stack import fbo_stack
@@ -73,6 +75,7 @@ class MeshViewerWindow(Window):
 
     # ImGui states.
     mesh_file_dialog: portable_file_dialogs.open_file | None = None
+    mesh_loader: MeshLoader = MeshLoader()
     show_cam_control: bool = False
     avail_shaders = list(shaders.keys())
     shader_idx = 0
@@ -112,36 +115,26 @@ class MeshViewerWindow(Window):
     def __del__(self):
         self.settings_state.detach(self.settings_observer)
 
-    def load_mesh(self, mesh_path: str):
-        logger.info(f"Loading mesh from {mesh_path}")
-        try:
-            mesh = trimesh.load(mesh_path)
-        except:
-            logger.error("Mesh load failed.")
+    def update_mesh(self):
+        if not self.mesh_loader.is_loaded():
             return
-        if type(mesh) is trimesh.Trimesh:
-            self.vbo_list = []
-            self.vbo_list.append(
-                (
-                    self.ctx.buffer(mesh.vertices.astype("f4").tobytes()),
-                    "3f",
-                    ("in_vert",)
-                )
+        self.vbo_list = []
+        self.vbo_list.append(
+            (
+                self.ctx.buffer(self.mesh_loader.vertex_buf),
+                "3f",
+                ("in_vert",)
             )
-            self.vbo_list.append(
-                (
-                    self.ctx.buffer(
-                        mesh.vertex_normals.astype("f4").tobytes()),
-                    "3f",
-                    ("in_norm",)
-                )
+        )
+        self.vbo_list.append(
+            (
+                self.ctx.buffer(self.mesh_loader.normal_buf),
+                "3f",
+                ("in_norm",)
             )
-            self.ibo = self.ctx.buffer(mesh.faces.astype("u4").tobytes())
-        elif type(mesh) is List:
-            logger.warning(
-                "Loading multiple meshes in the mesh viewer is not supported yet.")
-        else:
-            logger.error("Unknown mesh type.")
+        )
+        self.ibo = self.ctx.buffer(self.mesh_loader.index_buf)
+        self.assemble_vao()
 
     def load_shader(self, shader_name: str):
         """Load shader.
@@ -299,6 +292,9 @@ class MeshViewerWindow(Window):
         fbo_stack.pop()
 
     def render(self, time: float, frame_time: float):
+        # Update mesh.
+        self.update_mesh()
+
         # Camera contol window.
         imgui.set_next_window_size_constraints(
             size_min=(400, 100),
@@ -387,7 +383,8 @@ class MeshViewerWindow(Window):
                 if clicked:
                     self.show_cam_control = not self.show_cam_control
                 # Load mesh.
-                clicked, _ = imgui.menu_item("Load Mesh", "", False)
+                clicked, _ = imgui.menu_item(
+                    "Load Mesh", "", False, not self.mesh_loader.is_loading())
                 if clicked and self.mesh_file_dialog is None:
                     self.mesh_file_dialog = portable_file_dialogs.open_file(
                         "Open Mesh File",
@@ -402,8 +399,10 @@ class MeshViewerWindow(Window):
                     else:
                         mesh_file_path = mesh_file_paths[0]
                         logger.info(f"Selected mesh file {mesh_file_path}.")
-                        self.load_mesh(mesh_file_path)
-                        self.assemble_vao()
+                        threading.Thread(
+                            target=self.mesh_loader.load,
+                            args=[mesh_file_path]
+                        ).start()
                     self.mesh_file_dialog = None
                 # Shading.
                 imgui.push_item_width(100)
