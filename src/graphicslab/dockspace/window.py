@@ -39,6 +39,7 @@ class Dockspace:
     # App status.
     status_state: StatusState = StatusState()
     status_observer: StatusObserver = StatusObserver()
+    show_status_window: bool = False
 
     # Menu states.
     # File
@@ -207,14 +208,15 @@ class Dockspace:
                         imgui.WindowFlags_.no_background.value)
         with imgui_ctx.begin("Status Bar", True, window_flags):
             with imgui_ctx.begin_menu_bar():
-                imgui.push_item_width(100)
+                # Status
                 num_jobs = len(self.status_observer.value)
                 if num_jobs == 0:
-                    imgui.menu_item("Status: ALL DONE", "", False)
+                    _, self.show_status_window = imgui.menu_item(
+                        "Status: ALL DONE", "", self.show_status_window)
                 else:
-                    imgui.menu_item(
-                        f"Status: {num_jobs} jobs working", "", False)
-                imgui.pop_item_width()
+                    _, self.show_status_window = imgui.menu_item(
+                        f"Status: {num_jobs} jobs working", "", self.show_status_window)
+                # Frame rate.
                 if self.settings_observer.value.interface_settings.show_fps_counter:
                     self.frame_time_buf[self.frame_time_buf_idx] = frame_time
                     self.frame_time_buf_idx = (
@@ -225,3 +227,34 @@ class Dockspace:
                         self.last_update_frame_rate = 0
                     self.last_update_frame_rate += frame_time
                     imgui.text(f"{self.frame_rate} FPS")
+
+        # Status window.
+        if self.show_status_window:
+            imgui.set_next_window_size_constraints(
+                (200, 100),
+                (imgui.FLT_MAX, imgui.FLT_MAX)
+            )
+            with imgui_ctx.begin("Running Jobs", self.show_status_window) as (expanded, opened):
+                if not opened:
+                    self.show_status_window = False
+                table_flags = (
+                    imgui.TableFlags_.sizing_fixed_fit.value |
+                    imgui.TableFlags_.row_bg.value |
+                    imgui.TableFlags_.borders.value |
+                    imgui.TableFlags_.resizable.value
+                )
+                with imgui_ctx.begin_table("jobs_table", 2, table_flags):
+                    imgui.table_setup_column(
+                        "Job Names", imgui.TableColumnFlags_.width_fixed.value)
+                    imgui.table_setup_column(
+                        "Job Status", imgui.TableColumnFlags_.width_stretch.value)
+                    imgui.table_headers_row()
+                    for job, status in self.status_observer.value.items():
+                        imgui.table_next_row()
+                        imgui.table_set_column_index(0)
+                        imgui.text(job)
+                        imgui.table_set_column_index(1)
+                        if type(status) is str:
+                            imgui.text(status)
+                        elif type(status) is float:
+                            imgui.progress_bar(status)
