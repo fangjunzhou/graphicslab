@@ -324,19 +324,21 @@ class MeshViewerWindow(Window):
                 )
                 if changed:
                     self.update_view_mat(*self.get_cam_transform())
-                changed, self.theta = imgui.slider_float(
+                changed, self.theta = imgui.drag_float(
                     "Camera Rotation-XY (theta)",
                     self.theta,
-                    0, 2 * np.pi
+                    0.1,
                 )
                 if changed:
+                    self.theta = (self.theta + np.pi) % (2 * np.pi) - np.pi # let theta in [-pi, pi]
                     self.update_view_mat(*self.get_cam_transform())
-                changed, self.phi = imgui.slider_float(
+                changed, self.phi = imgui.drag_float(
                     "Camera Rotation-Z (phi)",
                     self.phi,
-                    0, np.pi
+                    0.1
                 )
                 if changed:
+                    self.phi = (self.phi + np.pi) % (2 * np.pi) - np.pi  # let phi in [-pi, pi]
                     self.update_view_mat(*self.get_cam_transform())
 
                 imgui.separator_text("Camera Intrinsics")
