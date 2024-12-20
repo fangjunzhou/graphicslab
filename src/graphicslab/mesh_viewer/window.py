@@ -457,7 +457,14 @@ class MeshViewerWindow(Window):
                     self.update_view_mat(*self.get_cam_transform())
                 scroll = self.io.mouse_wheel
                 if scroll != 0:
-                    self.rho += scroll / 100 * \
-                        abs(self.rho) * self.scroll_sensitivity
-                    self.rho = glm.vec1(glm.clamp(self.rho, 1.0, 20.0)).x
+                    if self.cam_modes[self.cam_mode_idx] == CameraMode.PERSPECTIVE:
+                        self.rho += scroll / 100 * \
+                            abs(self.rho) * self.scroll_sensitivity
+                        self.rho = glm.vec1(glm.clamp(self.rho, 1.0, 20.0)).x
+                    elif self.cam_modes[self.cam_mode_idx] == CameraMode.ORTHOGONAL:
+                        self.cam_orth_scale += scroll / 100 * \
+                            abs(self.cam_orth_scale) * self.scroll_sensitivity
+                        self.cam_orth_scale = glm.vec1(
+                            glm.clamp(self.cam_orth_scale, 1, 20)).x
                     self.update_view_mat(*self.get_cam_transform())
+                    self.update_perspective_mat()
