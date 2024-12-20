@@ -9,11 +9,11 @@ import numpy as np
 import trimesh
 
 import moderngl
-from moderngl_playground.camera import CameraMode
-from moderngl_playground.consts import assets_path
-from moderngl_playground.settings.settings import SettingsObserver, SettingsState
-from moderngl_playground.window import Window
-from moderngl_playground.fbo_stack import fbo_stack
+from graphicslab.camera import CameraMode
+from graphicslab.consts import assets_path
+from graphicslab.settings.settings import SettingsObserver, SettingsState
+from graphicslab.window import Window
+from graphicslab.fbo_stack import fbo_stack
 
 
 shaders = {

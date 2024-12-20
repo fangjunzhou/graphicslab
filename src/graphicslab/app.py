@@ -12,12 +12,12 @@ from moderngl_window.context.base import WindowConfig
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
 from imgui_bundle import imgui
 
-from moderngl_playground.consts import assets_path
-from moderngl_playground.fbo_stack import fbo_stack
-from moderngl_playground.window import Window
-from moderngl_playground.dockspace.window import Dockspace
-from moderngl_playground.settings.settings import SettingsState
-from moderngl_playground.settings.utils import load_settings
+from graphicslab.consts import assets_path
+from graphicslab.fbo_stack import fbo_stack
+from graphicslab.window import Window
+from graphicslab.dockspace.window import Dockspace
+from graphicslab.settings.settings import SettingsState
+from graphicslab.settings.utils import load_settings
 
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ logger = logging.getLogger(__name__)
 class App(WindowConfig):
     # ---------------------- Window Config  ---------------------- #
 
-    title = "ModernGL Playground"
+    title = "Graphics Lab"
     aspect_ratio = None
 
     # ------------------------ App States ------------------------ #

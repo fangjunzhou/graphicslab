@@ -11,11 +11,11 @@ import numpy as np
 from moderngl_window.context.base.window import BaseWindow
 from imgui_bundle import imgui, imgui_ctx
 
-from moderngl_playground.mesh_viewer.window import MeshViewerWindow
-from moderngl_playground.window import Window
-from moderngl_playground.about.window import AboutWindow
-from moderngl_playground.settings.settings import SettingsObserver, SettingsState
-from moderngl_playground.settings.window import SettingsWindow
+from graphicslab.mesh_viewer.window import MeshViewerWindow
+from graphicslab.window import Window
+from graphicslab.about.window import AboutWindow
+from graphicslab.settings.settings import SettingsObserver, SettingsState
+from graphicslab.settings.window import SettingsWindow
 
 
 logger = logging.getLogger(__name__)

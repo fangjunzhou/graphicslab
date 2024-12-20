@@ -6,8 +6,8 @@ from typing import Callable
 
 from imgui_bundle import imgui, imgui_ctx
 
-from moderngl_playground.window import Window
-from moderngl_playground.settings.utils import config_dir
+from graphicslab.window import Window
+from graphicslab.settings.utils import config_dir
 
 
 class AboutWindow(Window):
@@ -19,7 +19,7 @@ class AboutWindow(Window):
         with imgui_ctx.begin("About", True) as (expanded, opened):
             if not opened:
                 self.close_window()
-            imgui.text("ModernGL Playground by Fangjun Zhou")
+            imgui.text("GraphicsLab by Fangjun Zhou")
 
             imgui.separator_text("App Data Path")
 

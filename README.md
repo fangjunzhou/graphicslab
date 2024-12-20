@@ -1,4 +1,4 @@
-# ModernGL Playground
+# GraphicsLab
 
 ![screenshot](./assets/images/screenshot-1.png)
 
@@ -9,7 +9,7 @@ A experimental render environment with python moderngl library.
 - Fork this project by
 
 ```bash
-git clone git@github.com:fangjunzhou/moderngl-playground.git
+git clone git@github.com:fangjunzhou/graphicslab.git
 ```
 
 - Install [uv](https://github.com/astral-sh/uv) with
@@ -20,7 +20,7 @@ pip install uv
 
 - Inside the repository, run `uv sync` to install all the dependencies.
 
-- Start the playground editor by
+- Start the editor by
 
 ```bash
 uv run start

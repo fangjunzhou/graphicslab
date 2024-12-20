@@ -1,4 +1,4 @@
-from moderngl_playground import app
+from graphicslab import app
 
 
 def main():

@@ -4,9 +4,9 @@ import copy
 
 from imgui_bundle import imgui, imgui_ctx
 
-from moderngl_playground.window import Window
-from moderngl_playground.settings.settings import Settings, SettingsState, SettingsObserver
-from moderngl_playground.settings.utils import save_settings
+from graphicslab.window import Window
+from graphicslab.settings.settings import Settings, SettingsState, SettingsObserver
+from graphicslab.settings.utils import save_settings
 
 
 class SettingsWindow(Window):

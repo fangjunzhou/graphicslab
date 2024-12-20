@@ -3,12 +3,12 @@ import logging
 from typing import List
 
 from platformdirs import user_config_dir
-from moderngl_playground.settings.settings import Settings
+from graphicslab.settings.settings import Settings
 
 
 logger = logging.getLogger(__name__)
 
-config_dir = pathlib.Path(user_config_dir("moderngl-playground"))
+config_dir = pathlib.Path(user_config_dir("graphicslab"))
 
 
 def load_settings() -> Settings:
