@@ -10,10 +10,12 @@ uniform mat4 mat_MV;
 uniform mat4 mat_MVP;
 
 out vec4 vert_pos_view;
+out vec4 vert_norm_world;
 out vec4 vert_norm_view;
 
 void main() {
   vert_pos_view = mat_MV * vec4(in_vert, 1);
+  vert_norm_world = mat_M * vec4(in_norm, 0);
   vert_norm_view = mat_MV * vec4(in_norm, 0);
   gl_Position = mat_MVP * vec4(in_vert, 1);
 }

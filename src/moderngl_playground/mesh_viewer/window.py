@@ -1,10 +1,12 @@
 from typing import Callable, List, Tuple
 
+import pathlib
 import logging
 import glm
-from imgui_bundle import imgui, imgui_ctx
+from imgui_bundle import imgui, imgui_ctx, portable_file_dialogs
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
 import numpy as np
+import trimesh
 
 import moderngl
 from moderngl_playground.camera import CameraMode
@@ -30,6 +32,7 @@ class MeshViewerWindow(Window):
     ctx: moderngl.Context
     imgui_renderer: ModernglWindowRenderer
     render_texture: moderngl.Texture
+    depth_buffer: moderngl.Renderbuffer
     fbo: moderngl.Framebuffer
     clear_color = (0, 0, 0, 1)
 
@@ -60,6 +63,7 @@ class MeshViewerWindow(Window):
     perspective_mat = glm.identity(glm.mat4x4)
 
     # ImGui states.
+    mesh_file_dialog: portable_file_dialogs.open_file | None = None
     show_cam_control: bool = True
 
     def __init__(
@@ -73,9 +77,11 @@ class MeshViewerWindow(Window):
         self.ctx = ctx
         self.imgui_renderer = imgui_renderer
         self.render_texture = self.ctx.texture((16, 16), 3)
+        self.depth_buffer = self.ctx.depth_renderbuffer((16, 16))
         self.imgui_renderer.register_texture(self.render_texture)
         self.fbo = self.ctx.framebuffer(
-            color_attachments=[self.render_texture]
+            color_attachments=[self.render_texture],
+            depth_attachment=self.depth_buffer
         )
         # Initialize shader and VAO.
         # TODO: Remove sample VBO.
@@ -109,6 +115,37 @@ class MeshViewerWindow(Window):
         # Initialize viewport matrices.
         self.update_view_mat(*self.get_cam_transform())
         self.update_perspective_mat()
+
+    def load_mesh(self, mesh_path: str):
+        logger.info(f"Loading mesh from {mesh_path}")
+        try:
+            mesh = trimesh.load(mesh_path)
+        except:
+            logger.error("Mesh load failed.")
+            return
+        if type(mesh) is trimesh.Trimesh:
+            self.vbo_list = []
+            self.vbo_list.append(
+                (
+                    self.ctx.buffer(mesh.vertices.astype("f4").tobytes()),
+                    "3f",
+                    ("in_vert",)
+                )
+            )
+            self.vbo_list.append(
+                (
+                    self.ctx.buffer(
+                        mesh.vertex_normals.astype("f4").tobytes()),
+                    "3f",
+                    ("in_norm",)
+                )
+            )
+            self.ibo = self.ctx.buffer(mesh.faces.astype("u4").tobytes())
+        elif type(mesh) is List:
+            logger.warning(
+                "Loading multiple meshes in the mesh viewer is not supported yet.")
+        else:
+            logger.error("Unknown mesh type.")
 
     def load_shader(self, shader_name: str):
         """Load shader.
@@ -146,9 +183,11 @@ class MeshViewerWindow(Window):
         # Viewport update.
         w, h = self.viewport_size
         self.render_texture = self.ctx.texture((w, h), 3)
+        self.depth_buffer = self.ctx.depth_renderbuffer((w, h))
         self.imgui_renderer.register_texture(self.render_texture)
         self.fbo = self.ctx.framebuffer(
-            color_attachments=[self.render_texture]
+            color_attachments=[self.render_texture],
+            depth_attachment=self.depth_buffer
         )
 
     def get_cam_transform(self):
@@ -224,7 +263,10 @@ class MeshViewerWindow(Window):
         fbo_stack.push(self.fbo)
 
         # Clear screen.
-        self.fbo.clear(*self.clear_color)
+        self.fbo.clear(*self.clear_color, depth=1)
+        # Enabled depth test.
+        self.ctx.enable(moderngl.DEPTH_TEST | moderngl.CULL_FACE)
+        self.ctx.depth_func = "<="
 
         # Calculate uniforms.
         mat_M = self.model_mat
@@ -334,10 +376,30 @@ class MeshViewerWindow(Window):
 
             # Mesh viewer menu.
             with imgui_ctx.begin_menu_bar():
+                # Camera control.
                 clicked, _ = imgui.menu_item(
                     "Camera Control", "", self.show_cam_control)
                 if clicked:
                     self.show_cam_control = not self.show_cam_control
+                # Load mesh.
+                clicked, _ = imgui.menu_item("Load Mesh", "", False)
+                if clicked and self.mesh_file_dialog is None:
+                    self.mesh_file_dialog = portable_file_dialogs.open_file(
+                        "Open Mesh File",
+                        filters=["*.ply *.obj, *.stl *.gltf"]
+                    )
+                if self.mesh_file_dialog is not None and self.mesh_file_dialog.ready():
+                    mesh_file_paths = self.mesh_file_dialog.result()
+                    if len(mesh_file_paths) > 1:
+                        logger.warning("Cannot load multiple mesh files.")
+                    elif len(mesh_file_paths) == 0:
+                        logger.info("No mesh file selected.")
+                    else:
+                        mesh_file_path = mesh_file_paths[0]
+                        logger.info(f"Selected mesh file {mesh_file_path}.")
+                        self.load_mesh(mesh_file_path)
+                        self.assemble_vao()
+                    self.mesh_file_dialog = None
 
             # Viewport size.
             w, h = imgui.get_content_region_avail()

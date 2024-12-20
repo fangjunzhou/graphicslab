@@ -7,6 +7,7 @@ from collections import deque
 import argparse
 import logging
 
+import moderngl
 from moderngl_window.context.base import WindowConfig
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
 from imgui_bundle import imgui
