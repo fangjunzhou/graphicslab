@@ -150,7 +150,21 @@ class Dockspace:
                         imgui.WindowFlags_.no_background.value)
         with imgui_ctx.begin("Dockspace Window", True, window_flags):
             # Dockspace.
-            imgui.dock_space(imgui.get_id("Dockspace"))
+            dockspace_id = imgui.get_id("Dockspace")
+            # Build dock space.
+            if not imgui.internal.dock_builder_get_node(dockspace_id):
+                imgui.internal.dock_builder_remove_node(dockspace_id)
+                imgui.internal.dock_builder_add_node(dockspace_id)
+                res = imgui.internal.dock_builder_split_node(
+                    dockspace_id, imgui.Dir.left, 0.7)
+                mesh_viewer_id = res.id_at_dir
+                mesh_viewer_cam_control_id = res.id_at_opposite_dir
+                imgui.internal.dock_builder_dock_window(
+                    "Mesh Viewer", mesh_viewer_id)
+                imgui.internal.dock_builder_dock_window(
+                    "Mesh Viewer Camera Control", mesh_viewer_cam_control_id)
+                imgui.internal.dock_builder_finish(dockspace_id)
+            imgui.dock_space(dockspace_id)
 
         # ------------------------ Status Bar ------------------------ #
 
