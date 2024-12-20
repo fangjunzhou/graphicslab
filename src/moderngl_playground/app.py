@@ -19,6 +19,9 @@ from moderngl_playground.settings.settings import SettingsState
 from moderngl_playground.settings.utils import load_settings
 
 
+logger = logging.getLogger(__name__)
+
+
 class App(WindowConfig):
     # ---------------------- Window Config  ---------------------- #
 
@@ -59,14 +62,13 @@ class App(WindowConfig):
             level=self.log_level,
             format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
         )
-        self.logger = logging.getLogger(__name__)
-        self.logger.info("WindowConfig initialized.")
-        self.logger.info(f"Current OpenGL version: {self.gl_version}")
+        logger.info("WindowConfig initialized.")
+        logger.info(f"Current OpenGL version: {self.gl_version}")
         # Load settings.
         self.settings_state.value = load_settings()
         # Initialize ModernGL context.
         self.ctx.gc_mode = "auto"
-        self.logger.info(f"Using gc_mode: {self.ctx.gc_mode}")
+        logger.info(f"Using gc_mode: {self.ctx.gc_mode}")
         # Initialize ImGui
         imgui.create_context()
         self.io = imgui.get_io()
@@ -74,14 +76,14 @@ class App(WindowConfig):
         self.io.set_log_filename("")
         # Initialize renderer.
         self.imgui_renderer = ModernglWindowRenderer(self.wnd)
-        self.logger.info("ImGui initialized.")
+        logger.info("ImGui initialized.")
         # Initialize FBO stack.
         fbo_stack.push(self.wnd.fbo)
         # Load font.
         module_path = importlib.resources.files(__package__)
         font_path = module_path / "assets" / "fonts" / \
             "JetBrainsMono" / "JetBrainsMonoNerdFont-Regular.ttf"
-        self.logger.info(f"Loading font from {font_path}")
+        logger.info(f"Loading font from {font_path}")
         self.default_font = self.io.fonts.add_font_from_file_ttf(
             str(font_path),
             16
