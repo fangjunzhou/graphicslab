@@ -19,6 +19,10 @@ shaders = {
     "default": {
         "vert": assets_path / "shaders" / "default" / "vert.glsl",
         "frag": assets_path / "shaders" / "default" / "frag.glsl",
+    },
+    "normal": {
+        "vert": assets_path / "shaders" / "normal" / "vert.glsl",
+        "frag": assets_path / "shaders" / "normal" / "frag.glsl",
     }
 }
 
@@ -65,6 +69,8 @@ class MeshViewerWindow(Window):
     # ImGui states.
     mesh_file_dialog: portable_file_dialogs.open_file | None = None
     show_cam_control: bool = True
+    avail_shaders = list(shaders.keys())
+    shader_idx = 0
 
     def __init__(
         self,
@@ -84,33 +90,8 @@ class MeshViewerWindow(Window):
             depth_attachment=self.depth_buffer
         )
         # Initialize shader and VAO.
-        # TODO: Remove sample VBO.
         self.vbo_list = []
-        debug_vertices = np.array([
-            [-1, 0, 0],
-            [1, 0, 0],
-            [0, 0, 1],
-        ])
-        self.vbo_list.append(
-            (
-                self.ctx.buffer(debug_vertices.astype("f4").tobytes()),
-                "3f",
-                ("in_vert",)
-            )
-        )
-        debug_normals = np.array([
-            [0, -1, 0],
-            [0, -1, 0],
-            [0, -1, 0],
-        ])
-        self.vbo_list.append(
-            (
-                self.ctx.buffer(debug_normals.astype("f4").tobytes()),
-                "3f",
-                ("in_norm",)
-            )
-        )
-        self.load_shader("default")
+        self.load_shader(self.avail_shaders[self.shader_idx])
         self.assemble_vao()
         # Initialize viewport matrices.
         self.update_view_mat(*self.get_cam_transform())
@@ -330,7 +311,8 @@ class MeshViewerWindow(Window):
                     0.1,
                 )
                 if changed:
-                    self.theta = (self.theta + np.pi) % (2 * np.pi) - np.pi # let theta in [-pi, pi]
+                    # let theta in [-pi, pi]
+                    self.theta = (self.theta + np.pi) % (2 * np.pi) - np.pi
                     self.update_view_mat(*self.get_cam_transform())
                 changed, self.phi = imgui.drag_float(
                     "Camera Rotation-Z (phi)",
@@ -338,7 +320,8 @@ class MeshViewerWindow(Window):
                     0.1
                 )
                 if changed:
-                    self.phi = (self.phi + np.pi) % (2 * np.pi) - np.pi  # let phi in [-pi, pi]
+                    self.phi = (self.phi + np.pi) % (2 * np.pi) - \
+                        np.pi  # let phi in [-pi, pi]
                     self.update_view_mat(*self.get_cam_transform())
 
                 imgui.separator_text("Camera Intrinsics")
@@ -402,6 +385,14 @@ class MeshViewerWindow(Window):
                         self.load_mesh(mesh_file_path)
                         self.assemble_vao()
                     self.mesh_file_dialog = None
+                # Shading.
+                imgui.push_item_width(100)
+                changed, self.shader_idx = imgui.combo(
+                    "Shading", self.shader_idx, self.avail_shaders)
+                if changed:
+                    self.load_shader(self.avail_shaders[self.shader_idx])
+                    self.assemble_vao()
+                imgui.pop_item_width()
 
             # Viewport size.
             w, h = imgui.get_content_region_avail()
