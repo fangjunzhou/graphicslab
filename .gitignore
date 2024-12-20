@@ -1,7 +1,7 @@
 # Misc
 .DS_Store
 .direnv/
-data/
+temp/
 
 # Python
 __pycache__/
