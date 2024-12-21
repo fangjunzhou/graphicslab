@@ -231,7 +231,7 @@ class Dockspace:
         # Status window.
         if self.show_status_window:
             imgui.set_next_window_size_constraints(
-                (200, 100),
+                (300, 200),
                 (imgui.FLT_MAX, imgui.FLT_MAX)
             )
             with imgui_ctx.begin("Running Jobs", self.show_status_window) as (expanded, opened):
@@ -245,9 +245,14 @@ class Dockspace:
                 )
                 if imgui.begin_table("jobs_table", 2, table_flags):
                     imgui.table_setup_column(
-                        "Job Names", imgui.TableColumnFlags_.width_fixed.value)
+                        "Job Names",
+                        imgui.TableColumnFlags_.width_fixed.value,
+                        100
+                    )
                     imgui.table_setup_column(
-                        "Job Status", imgui.TableColumnFlags_.width_stretch.value)
+                        "Job Status",
+                        imgui.TableColumnFlags_.width_stretch.value
+                    )
                     imgui.table_headers_row()
                     for job, status in self.status_observer.value.items():
                         imgui.table_next_row()

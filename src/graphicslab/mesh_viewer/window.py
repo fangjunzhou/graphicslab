@@ -370,6 +370,8 @@ class MeshViewerWindow(Window):
                     if changed:
                         self.update_perspective_mat()
 
+                imgui.pop_item_width()
+
         # Mesh viewer main window.
         imgui.set_next_window_size_constraints(
             size_min=(480, 270),

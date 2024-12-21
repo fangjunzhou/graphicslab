@@ -20,6 +20,10 @@ class SettingsWindow(Window):
         self.unsaved_settings = copy.deepcopy(settings.value)
 
     def render(self, time: float, frame_time: float):
+        imgui.set_next_window_size_constraints(
+            (400, 200),
+            (imgui.FLT_MAX, imgui.FLT_MAX)
+        )
         window_flags = imgui.WindowFlags_.menu_bar.value
         with imgui_ctx.begin("Settings", True, window_flags) as (expanded, opened):
             if not opened:
@@ -43,6 +47,8 @@ class SettingsWindow(Window):
 
             imgui.separator_text("Interface Settings")
 
+            imgui.push_item_width(-200)
+
             changed, self.unsaved_settings.interface_settings.show_fps_counter = imgui.checkbox(
                 "Show FPS Counter", self.unsaved_settings.interface_settings.show_fps_counter)
             if changed:
@@ -56,3 +62,5 @@ class SettingsWindow(Window):
             )
             if changed:
                 self.unsave = True
+
+            imgui.pop_item_width()
