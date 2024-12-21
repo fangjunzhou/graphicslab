@@ -243,7 +243,7 @@ class Dockspace:
                     imgui.TableFlags_.borders.value |
                     imgui.TableFlags_.resizable.value
                 )
-                with imgui_ctx.begin_table("jobs_table", 2, table_flags):
+                if imgui.begin_table("jobs_table", 2, table_flags):
                     imgui.table_setup_column(
                         "Job Names", imgui.TableColumnFlags_.width_fixed.value)
                     imgui.table_setup_column(
@@ -258,3 +258,4 @@ class Dockspace:
                             imgui.text(status)
                         elif type(status) is float:
                             imgui.progress_bar(status)
+                    imgui.end_table()
