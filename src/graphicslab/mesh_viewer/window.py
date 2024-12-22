@@ -80,11 +80,18 @@ class MeshViewerWindow(Window):
     # ImGui states.
     mesh_file_dialog: portable_file_dialogs.open_file | None = None
     mesh_loader: MeshLoader = MeshLoader()
+
     show_cam_control: bool = False
+
     show_shading_control: bool = False
     avail_shaders = list(shaders.keys())
     avail_shaders.append("custom")
     shader_idx = 0
+    custom_vert_path: pathlib.Path | None = None
+    vertex_shader_file_dialog: portable_file_dialogs.open_file | None = None
+    custom_frag_path: pathlib.Path | None = None
+    fragment_shader_file_dialog: portable_file_dialogs.open_file | None = None
+
     scroll_sensitivity = 1
 
     def __init__(
@@ -168,6 +175,18 @@ class MeshViewerWindow(Window):
         )
         self.program = self.shader.program
         logger.info(f"Shader {shader_name} is loaded.")
+        self.assemble_vao()
+
+    def load_custom_shader(self):
+        if self.custom_vert_path is None or self.custom_frag_path is None:
+            return
+        logger.info(f"Loading custom shader.")
+        self.shader = Shader(
+            self.ctx,
+            self.custom_vert_path,
+            self.custom_frag_path
+        )
+        self.program = self.shader.program
         self.assemble_vao()
 
     def assemble_vao(self):
@@ -401,6 +420,67 @@ class MeshViewerWindow(Window):
                 if changed:
                     if self.shader_idx < len(shaders):
                         self.load_shader(self.avail_shaders[self.shader_idx])
+
+                if self.shader_idx == len(shaders):
+                    imgui.push_item_width(-200)
+                    # Vertex source.
+                    if self.custom_vert_path is None:
+                        vert_path = "None"
+                    else:
+                        vert_path = str(self.custom_vert_path.resolve())
+                    imgui.input_text("##vert_path", vert_path)
+
+                    imgui.same_line()
+
+                    if imgui.button("Load Vertex Shader", (-imgui.FLT_MIN, 0)) and self.vertex_shader_file_dialog is None:
+                        self.vertex_shader_file_dialog = portable_file_dialogs.open_file(
+                            "Open Vertex Shader",
+                            filters=["*.glsl"]
+                        )
+                    if self.vertex_shader_file_dialog is not None and self.vertex_shader_file_dialog.ready():
+                        file_path = self.vertex_shader_file_dialog.result()
+                        if len(file_path) > 1:
+                            logger.warning(
+                                "Cannot load multiple shader files.")
+                        elif len(file_path) == 0:
+                            logger.info("No shader file selected.")
+                        else:
+                            self.custom_vert_path = pathlib.Path(file_path[0])
+                            logger.info(
+                                f"Selected shader file {self.custom_vert_path}.")
+                        self.vertex_shader_file_dialog = None
+
+                    # Fragment source.
+                    if self.custom_frag_path is None:
+                        frag_path = "None"
+                    else:
+                        frag_path = str(self.custom_frag_path.resolve())
+                    imgui.input_text("##frag_path", frag_path)
+
+                    imgui.same_line()
+
+                    if imgui.button("Load Fragment Shader", (-imgui.FLT_MIN, 0)) and self.fragment_shader_file_dialog is None:
+                        self.fragment_shader_file_dialog = portable_file_dialogs.open_file(
+                            "Open Fragment Shader",
+                            filters=["*.glsl"]
+                        )
+                    if self.fragment_shader_file_dialog is not None and self.fragment_shader_file_dialog.ready():
+                        file_path = self.fragment_shader_file_dialog.result()
+                        if len(file_path) > 1:
+                            logger.warning(
+                                "Cannot load multiple shader files.")
+                        elif len(file_path) == 0:
+                            logger.info("No shader file selected.")
+                        else:
+                            self.custom_frag_path = pathlib.Path(file_path[0])
+                            logger.info(
+                                f"Selected shader file {self.custom_frag_path}.")
+                        self.fragment_shader_file_dialog = None
+                    imgui.pop_item_width()
+
+                    if imgui.button("Reload Shader", (-imgui.FLT_MIN, 0)):
+                        self.load_custom_shader()
+
                 imgui.pop_item_width()
 
         # Mesh viewer main window.
@@ -430,13 +510,13 @@ class MeshViewerWindow(Window):
                         filters=["*.ply *.obj, *.stl *.gltf"]
                     )
                 if self.mesh_file_dialog is not None and self.mesh_file_dialog.ready():
-                    mesh_file_paths = self.mesh_file_dialog.result()
-                    if len(mesh_file_paths) > 1:
+                    file_path = self.mesh_file_dialog.result()
+                    if len(file_path) > 1:
                         logger.warning("Cannot load multiple mesh files.")
-                    elif len(mesh_file_paths) == 0:
+                    elif len(file_path) == 0:
                         logger.info("No mesh file selected.")
                     else:
-                        mesh_file_path = mesh_file_paths[0]
+                        mesh_file_path = file_path[0]
                         logger.info(f"Selected mesh file {mesh_file_path}.")
                         self.status_state.update_status(
                             "Mesh Viewer", "Loading Mesh"
