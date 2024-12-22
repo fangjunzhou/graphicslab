@@ -81,7 +81,9 @@ class MeshViewerWindow(Window):
     mesh_file_dialog: portable_file_dialogs.open_file | None = None
     mesh_loader: MeshLoader = MeshLoader()
     show_cam_control: bool = False
+    show_shading_control: bool = False
     avail_shaders = list(shaders.keys())
+    avail_shaders.append("custom")
     shader_idx = 0
     scroll_sensitivity = 1
 
@@ -312,11 +314,11 @@ class MeshViewerWindow(Window):
         self.update_shader()
 
         # Camera contol window.
-        imgui.set_next_window_size_constraints(
-            size_min=(400, 100),
-            size_max=(imgui.FLT_MAX, imgui.FLT_MAX)
-        )
         if self.show_cam_control:
+            imgui.set_next_window_size_constraints(
+                size_min=(400, 100),
+                size_max=(imgui.FLT_MAX, imgui.FLT_MAX)
+            )
             with imgui_ctx.begin("Mesh Viewer Camera Control", True) as (expanded, opened):
                 if not opened:
                     self.show_cam_control = False
@@ -383,6 +385,24 @@ class MeshViewerWindow(Window):
 
                 imgui.pop_item_width()
 
+        # Shading control window.
+        if self.show_shading_control:
+            imgui.set_next_window_size_constraints(
+                size_min=(400, 100),
+                size_max=(imgui.FLT_MAX, imgui.FLT_MAX)
+            )
+            with imgui_ctx.begin("Mesh Viewer Shading Control", True) as (expanded, opened):
+                if not opened:
+                    self.show_shading_control = False
+                # Shading.
+                imgui.push_item_width(-100)
+                changed, self.shader_idx = imgui.combo(
+                    "Shader", self.shader_idx, self.avail_shaders)
+                if changed:
+                    if self.shader_idx < len(shaders):
+                        self.load_shader(self.avail_shaders[self.shader_idx])
+                imgui.pop_item_width()
+
         # Mesh viewer main window.
         imgui.set_next_window_size_constraints(
             size_min=(480, 270),
@@ -396,10 +416,11 @@ class MeshViewerWindow(Window):
             # Mesh viewer menu.
             with imgui_ctx.begin_menu_bar():
                 # Camera control.
-                clicked, _ = imgui.menu_item(
+                _, self.show_cam_control = imgui.menu_item(
                     "Camera Control", "", self.show_cam_control)
-                if clicked:
-                    self.show_cam_control = not self.show_cam_control
+                _, self.show_shading_control = imgui.menu_item(
+                    "Shading Control", "", self.show_shading_control
+                )
                 # Load mesh.
                 clicked, _ = imgui.menu_item(
                     "Load Mesh", "", False, not self.mesh_loader.is_loading())
@@ -425,13 +446,6 @@ class MeshViewerWindow(Window):
                             args=[mesh_file_path]
                         ).start()
                     self.mesh_file_dialog = None
-                # Shading.
-                imgui.push_item_width(100)
-                changed, self.shader_idx = imgui.combo(
-                    "Shading", self.shader_idx, self.avail_shaders)
-                if changed:
-                    self.load_shader(self.avail_shaders[self.shader_idx])
-                imgui.pop_item_width()
 
             # Viewport size.
             x, y = imgui.get_cursor_pos()
