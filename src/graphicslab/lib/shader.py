@@ -1,9 +1,10 @@
 import logging
+import os
 import pathlib
 import threading
 
+from dataclasses_json.api import A
 import moderngl
-from watchfiles import watch
 
 from graphicslab.events import app_close_event
 
@@ -15,15 +16,14 @@ class Shader:
     ctx: moderngl.Context
 
     vert_path: pathlib.Path
+    vert_last_change: float
     frag_path: pathlib.Path
+    frag_last_change: float
 
     vert_src: str
     frag_src: str
 
     program: moderngl.Program
-
-    changed: bool = False
-    changed_lock: threading.Lock = threading.Lock()
 
     def __init__(
             self,
@@ -46,10 +46,12 @@ class Shader:
 
         try:
             self.vert_src = vert_path.read_text()
+            self.vert_last_change = os.stat(vert_path).st_mtime
         except:
             raise RuntimeError(f"Vertex shader loaded failed.")
         try:
             self.frag_src = frag_path.read_text()
+            self.frag_last_change = os.stat(frag_path).st_mtime
         except:
             raise RuntimeError(f"Fragment shader loaded failed.")
 
@@ -58,31 +60,28 @@ class Shader:
             vertex_shader=self.vert_src,
             fragment_shader=self.frag_src
         )
-        threading.Thread(target=self.watch_change_thread).start()
-
-    def watch_change_thread(self):
-        logger.info("Shader file change watch thread started.")
-        for change in watch(
-            self.vert_path,
-            self.frag_path,
-            stop_event=app_close_event
-        ):
-            logger.info("Shader file change detected:")
-            logger.info(change)
-            with self.changed_lock:
-                self.frag_src = self.frag_path.read_text()
-                self.vert_src = self.vert_path.read_text()
-                self.changed = True
 
     def reload_shader(self):
-        with self.changed_lock:
-            if self.changed:
-                logger.info(
-                    "Reloading shader program.")
-                self.program = self.ctx.program(
-                    vertex_shader=self.vert_src,
-                    fragment_shader=self.frag_src
-                )
-                self.changed = False
-                return True
-            return False
+        vert_change = self.vert_last_change
+        if self.vert_path.exists():
+            vert_change = os.stat(self.vert_path).st_mtime
+        frag_change = self.frag_last_change
+        if self.frag_path.exists():
+            frag_change = os.stat(self.frag_path).st_mtime
+        changed = False
+        if self.vert_last_change < vert_change:
+            self.vert_src = self.vert_path.read_text()
+            self.vert_last_change = vert_change
+            changed = True
+        if self.frag_last_change < frag_change:
+            self.frag_src = self.frag_path.read_text()
+            self.frag_last_change = frag_change
+            changed = True
+        if changed:
+            logger.info("Source changed detected, reloading shader program.")
+            self.program = self.ctx.program(
+                vertex_shader=self.vert_src,
+                fragment_shader=self.frag_src
+            )
+            return True
+        return False

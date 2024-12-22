@@ -184,11 +184,13 @@ class Dockspace:
                 res = imgui.internal.dock_builder_split_node(
                     dockspace_id, imgui.Dir.left, 0.7)
                 mesh_viewer_id = res.id_at_dir
-                mesh_viewer_cam_control_id = res.id_at_opposite_dir
+                mesh_viewer_control = res.id_at_opposite_dir
                 imgui.internal.dock_builder_dock_window(
                     "Mesh Viewer", mesh_viewer_id)
                 imgui.internal.dock_builder_dock_window(
-                    "Mesh Viewer Camera Control", mesh_viewer_cam_control_id)
+                    "Mesh Viewer Camera Control", mesh_viewer_control)
+                imgui.internal.dock_builder_dock_window(
+                    "Mesh Viewer Shading Control", mesh_viewer_control)
                 imgui.internal.dock_builder_finish(dockspace_id)
             imgui.dock_space(dockspace_id)
 
