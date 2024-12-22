@@ -5,6 +5,8 @@ import threading
 import moderngl
 from watchfiles import watch
 
+from graphicslab.events import app_close_event
+
 
 logger = logging.getLogger(__name__)
 
@@ -63,6 +65,7 @@ class Shader:
         for change in watch(
             self.vert_path,
             self.frag_path,
+            stop_event=app_close_event
         ):
             logger.info("Shader file change detected:")
             logger.info(change)
