@@ -6,8 +6,6 @@ import threading
 from dataclasses_json.api import A
 import moderngl
 
-from graphicslab.events import app_close_event
-
 
 logger = logging.getLogger(__name__)
 

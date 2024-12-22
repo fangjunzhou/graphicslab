@@ -18,7 +18,6 @@ from graphicslab.window import Window
 from graphicslab.dockspace.window import Dockspace
 from graphicslab.settings.settings import SettingsState
 from graphicslab.settings.utils import load_settings
-from graphicslab.events import app_close_event
 
 
 logger = logging.getLogger(__name__)
@@ -144,10 +143,6 @@ class App(WindowConfig):
 
     def on_unicode_char_entered(self, char):
         self.imgui_renderer.unicode_char_entered(char)
-
-    def on_close(self) -> None:
-        app_close_event.set()
-        return super().on_close()
 
     def on_render(self, time: float, frame_time: float):
         # ImGui render cycle start.
