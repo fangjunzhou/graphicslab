@@ -14,6 +14,7 @@ from graphicslab.camera import CameraMode
 from graphicslab.consts import assets_path
 from graphicslab.dockspace.status import StatusState
 from graphicslab.lib.mesh_loader import MeshLoader
+from graphicslab.lib.shader import Shader
 from graphicslab.settings.settings import SettingsObserver, SettingsState
 from graphicslab.window import Window
 from graphicslab.fbo_stack import fbo_stack
@@ -50,6 +51,7 @@ class MeshViewerWindow(Window):
     clear_color = (0, 0, 0, 1)
 
     # OpenGL objects.
+    shader: Shader
     prog: moderngl.Program
     vbo_list: List[Tuple[moderngl.Buffer, str, Tuple[str, ...]]]
     ibo: moderngl.Buffer | None = None
@@ -111,7 +113,6 @@ class MeshViewerWindow(Window):
         # Initialize shader and VAO.
         self.vbo_list = []
         self.load_shader(self.avail_shaders[self.shader_idx])
-        self.assemble_vao()
         # Initialize viewport matrices.
         self.update_view_mat(*self.get_cam_transform())
         self.update_perspective_mat()
@@ -141,6 +142,12 @@ class MeshViewerWindow(Window):
         self.assemble_vao()
         self.status_state.finish_status("Mesh Viewer")
 
+    def update_shader(self):
+        if not self.shader.reload_shader():
+            return
+        self.program = self.shader.program
+        self.assemble_vao()
+
     def load_shader(self, shader_name: str):
         """Load shader.
 
@@ -152,11 +159,14 @@ class MeshViewerWindow(Window):
         """
         if shader_name not in shaders:
             raise KeyError(f"Shader {shader_name} doesn't exist.")
-        vertex_shader_src = shaders[shader_name]["vert"].read_text()
-        fragment_shader_src = shaders[shader_name]["frag"].read_text()
-        self.program = self.ctx.program(vertex_shader=vertex_shader_src,
-                                        fragment_shader=fragment_shader_src)
+        self.shader = Shader(
+            self.ctx,
+            shaders[shader_name]["vert"],
+            shaders[shader_name]["frag"]
+        )
+        self.program = self.shader.program
         logger.info(f"Shader {shader_name} is loaded.")
+        self.assemble_vao()
 
     def assemble_vao(self):
         """Assemble VAO using shader, VBO, and IBO"""
@@ -299,6 +309,7 @@ class MeshViewerWindow(Window):
     def render(self, time: float, frame_time: float):
         # Update mesh.
         self.update_mesh()
+        self.update_shader()
 
         # Camera contol window.
         imgui.set_next_window_size_constraints(
@@ -420,7 +431,6 @@ class MeshViewerWindow(Window):
                     "Shading", self.shader_idx, self.avail_shaders)
                 if changed:
                     self.load_shader(self.avail_shaders[self.shader_idx])
-                    self.assemble_vao()
                 imgui.pop_item_width()
 
             # Viewport size.

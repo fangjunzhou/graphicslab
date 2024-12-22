@@ -15,6 +15,7 @@ dependencies = [
     "py-observer",
     "pyglm>=2.7.3",
     "trimesh[easy]>=4.5.3",
+    "watchfiles>=1.0.3",
 ]
 
 [build-system]

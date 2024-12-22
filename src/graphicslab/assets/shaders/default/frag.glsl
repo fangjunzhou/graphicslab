@@ -14,5 +14,6 @@ void main() {
   vec3 light_dir_view = vec3(0, 0, 1);
   // Diffuse light strength.
   float light_strength = clamp(dot(light_dir_view, vert_norm_view.xyz), 0, 1);
-  frag_color = vec4(vec3(light_strength), 1);
+  vec3 light_color = vec3(1, 1, 1);
+  frag_color = vec4(light_color * light_strength, 1);
 }
