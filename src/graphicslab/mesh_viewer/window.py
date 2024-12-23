@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 import threading
 from typing import Callable, List, Tuple
 
@@ -15,12 +16,13 @@ from graphicslab.consts import assets_path
 from graphicslab.dockspace.status import StatusState
 from graphicslab.lib.mesh_loader import MeshLoader
 from graphicslab.lib.shader import Shader
+from graphicslab.mesh_viewer.viewport import Viewport
 from graphicslab.settings.settings import SettingsObserver, SettingsState
 from graphicslab.window import Window
 from graphicslab.fbo_stack import fbo_stack
 
 
-shaders = {
+builtin_viewer_shaders = {
     "default": {
         "vert": assets_path / "shaders" / "default" / "vert.glsl",
         "frag": assets_path / "shaders" / "default" / "frag.glsl",
@@ -34,65 +36,60 @@ shaders = {
 logger = logging.getLogger(__name__)
 
 
-class MeshViewerWindow(Window):
-    io: imgui.IO
-    settings_state: SettingsState
-    settings_observer: SettingsObserver
-    status_state: StatusState
-
-    viewport_size: Tuple[int, int] = (0, 0)
-    viewport_aspect: float = 1
-    # OpenGL render target.
-    ctx: moderngl.Context
-    imgui_renderer: ModernglWindowRenderer
-    render_texture: moderngl.Texture
-    depth_buffer: moderngl.Renderbuffer
-    fbo: moderngl.Framebuffer
-    clear_color = (0, 0, 0, 1)
-
-    # OpenGL objects.
-    shader: Shader
-    prog: moderngl.Program
-    vbo_list: List[Tuple[moderngl.Buffer, str, Tuple[str, ...]]]
-    ibo: moderngl.Buffer | None = None
-    vao: moderngl.VertexArray
-
-    # Camera parameters.
+@dataclass
+class CameraParameters:
+    # Camera position.
     rho: float = 3
     theta: float = np.pi / 2
     phi: float = np.pi / 4
     # Camera mode.
     cam_modes = [CameraMode.ORTHOGONAL, CameraMode.PERSPECTIVE]
     cam_modes_str = [str(mode) for mode in cam_modes]
-    cam_mode_idx = 1
-    cam_near = 0.1
-    cam_far = 100
+    cam_mode_idx: int = 1
+    # Clipping plane.
+    cam_near: float = 0.1
+    cam_far: float = 100
     # Orthogonal parameters.
-    cam_orth_scale = 10
+    cam_orth_scale: float = 10
     # Orthogonal parameters.
-    cam_perspective_fov = 90
+    cam_perspective_fov: float = 90
 
-    # Viewport matrices.
-    model_mat = glm.identity(glm.mat4x4)
-    view_mat = glm.identity(glm.mat4x4)
-    perspective_mat = glm.identity(glm.mat4x4)
 
-    # ImGui states.
-    mesh_file_dialog: portable_file_dialogs.open_file | None = None
+class MeshViewerWindow(Window):
+    # Internal states.
+    ctx: moderngl.Context
+    imgui_renderer: ModernglWindowRenderer
+    io: imgui.IO
+    settings_state: SettingsState
+    settings_observer: SettingsObserver
+    status_state: StatusState
+
+    # Camera states.
+    cam_states: CameraParameters = CameraParameters()
+    # Viewport states.
+    viewport: Viewport
+
+    # ----------------------- ImGui States ----------------------- #
+
+    # Mesh loader.
     mesh_loader: MeshLoader = MeshLoader()
+    mesh_file_dialog: portable_file_dialogs.open_file | None = None
 
+    # Camera control.
     show_cam_control: bool = False
+    scroll_sensitivity = 1
 
+    # Shading control.
     show_shading_control: bool = False
-    avail_shaders = list(shaders.keys())
+    # Shader selection.
+    avail_shaders = list(builtin_viewer_shaders.keys())
     avail_shaders.append("custom")
     shader_idx = 0
+    # Shader paths.
     custom_vert_path: pathlib.Path | None = None
     vertex_shader_file_dialog: portable_file_dialogs.open_file | None = None
     custom_frag_path: pathlib.Path | None = None
     fragment_shader_file_dialog: portable_file_dialogs.open_file | None = None
-
-    scroll_sensitivity = 1
 
     def __init__(
         self,
@@ -104,116 +101,52 @@ class MeshViewerWindow(Window):
         status_state: StatusState
     ):
         super().__init__(close_window)
-        # Initialize moderngl.
+        # Initialize internal states.
         self.ctx = ctx
         self.imgui_renderer = imgui_renderer
         self.io = io
         self.settings_state = settings_state
         self.settings_observer = SettingsObserver()
-        self.status_state = status_state
         self.settings_state.attach(self.settings_observer)
-        self.render_texture = self.ctx.texture((16, 16), 3)
-        self.depth_buffer = self.ctx.depth_renderbuffer((16, 16))
-        self.imgui_renderer.register_texture(self.render_texture)
-        self.fbo = self.ctx.framebuffer(
-            color_attachments=[self.render_texture],
-            depth_attachment=self.depth_buffer
-        )
-        # Initialize shader and VAO.
-        self.vbo_list = []
-        self.load_shader(self.avail_shaders[self.shader_idx])
+        self.status_state = status_state
+
+        # Initialize viewport.
+        self.viewport = Viewport(self.ctx)
+        self.imgui_renderer.register_texture(self.viewport.render_texture)
+        self.load_builtin_shader()
         # Initialize viewport matrices.
-        self.update_view_mat(*self.get_cam_transform())
-        self.update_perspective_mat()
+        self.viewport.update_view_mat(*self.get_cam_transform())
+        self.update_projection_mat()
 
     def __del__(self):
         self.settings_state.detach(self.settings_observer)
 
-    def update_mesh(self):
-        if not self.mesh_loader.is_loaded():
-            return
-        self.vbo_list = []
-        self.vbo_list.append(
-            (
-                self.ctx.buffer(self.mesh_loader.vertex_buf),
-                "3f",
-                ("in_vert",)
-            )
+    def load_builtin_shader(self):
+        # Shader name
+        shader_name = self.avail_shaders[self.shader_idx]
+        logger.info(f"Loading shader {shader_name}")
+        # Load shader to viewport.
+        shader_paths = builtin_viewer_shaders[shader_name]
+        self.viewport.load_shader(
+            shader_paths["vert"],
+            shader_paths["frag"]
         )
-        self.vbo_list.append(
-            (
-                self.ctx.buffer(self.mesh_loader.normal_buf),
-                "3f",
-                ("in_norm",)
-            )
-        )
-        self.ibo = self.ctx.buffer(self.mesh_loader.index_buf)
-        self.assemble_vao()
-        self.status_state.finish_status("Mesh Viewer")
-
-    def update_shader(self):
-        if not self.shader.reload_shader():
-            return
-        self.program = self.shader.program
-        self.assemble_vao()
-
-    def load_shader(self, shader_name: str):
-        """Load shader.
-
-        Args:
-            shader_name: name of the shader, must exist in shaders list.
-
-        Raises:
-            KeyError: When a shader not in shaders list is loaded.
-        """
-        if shader_name not in shaders:
-            raise KeyError(f"Shader {shader_name} doesn't exist.")
-        self.shader = Shader(
-            self.ctx,
-            shaders[shader_name]["vert"],
-            shaders[shader_name]["frag"]
-        )
-        self.program = self.shader.program
-        logger.info(f"Shader {shader_name} is loaded.")
-        self.assemble_vao()
 
     def load_custom_shader(self):
         if self.custom_vert_path is None or self.custom_frag_path is None:
-            return
-        logger.info(f"Loading custom shader.")
-        self.shader = Shader(
-            self.ctx,
-            self.custom_vert_path,
-            self.custom_frag_path
-        )
-        self.program = self.shader.program
-        self.assemble_vao()
+            logger.warning(
+                "Vertex or fragment shader not selected, abort loading shader.")
+        else:
+            self.viewport.load_shader(
+                self.custom_vert_path,
+                self.custom_frag_path
+            )
 
-    def assemble_vao(self):
-        """Assemble VAO using shader, VBO, and IBO"""
-        content = []
-        for vbo, buf_fmt, in_params in self.vbo_list:
-            content.append((vbo, buf_fmt, *in_params))
-        self.vao = self.ctx.vertex_array(
-            self.program,
-            content,
-            index_buffer=self.ibo
-        )
-        logger.info(f"VAO updated with {len(content)} buffers.")
-
-    def resize_view_port(self):
+    def resize_view_port(self, w: int, h: int):
         """Resize the viewport texture base on the new viewport size."""
-        # Release old texture.
-        self.imgui_renderer.remove_texture(self.render_texture)
-        # Viewport update.
-        w, h = self.viewport_size
-        self.render_texture = self.ctx.texture((w, h), 3)
-        self.depth_buffer = self.ctx.depth_renderbuffer((w, h))
-        self.imgui_renderer.register_texture(self.render_texture)
-        self.fbo = self.ctx.framebuffer(
-            color_attachments=[self.render_texture],
-            depth_attachment=self.depth_buffer
-        )
+        self.imgui_renderer.remove_texture(self.viewport.render_texture)
+        self.viewport.resize(w, h)
+        self.imgui_renderer.register_texture(self.viewport.render_texture)
 
     def get_cam_transform(self):
         """Get camera postion and rotation based on current camera parameters.
@@ -223,265 +156,207 @@ class MeshViewerWindow(Window):
             cam_rot: glm.quat rotation.
         """
         # Polar coordinate to cartesian coordinate.
-        x = self.rho * np.sin(self.phi) * np.cos(self.theta)
-        y = self.rho * np.sin(self.phi) * np.sin(self.theta)
-        z = self.rho * np.cos(self.phi)
+        x = self.cam_states.rho * \
+            np.sin(self.cam_states.phi) * np.cos(self.cam_states.theta)
+        y = self.cam_states.rho * \
+            np.sin(self.cam_states.phi) * np.sin(self.cam_states.theta)
+        z = self.cam_states.rho * np.cos(self.cam_states.phi)
         cam_pos = glm.vec3(x, y, z)
 
         cam_center = glm.vec3(0, 0, 0)
         world_up = glm.vec3(0, 0, 1)
-        cam_forward_xy = glm.vec3(-np.cos(self.theta), -
-                                  np.sin(self.theta), 0)
+        cam_forward_xy = glm.vec3(-np.cos(self.cam_states.theta), -
+                                  np.sin(self.cam_states.theta), 0)
         cam_right = glm.cross(cam_forward_xy, world_up)
-        cam_up = glm.rotate(cam_forward_xy, self.phi, cam_right)
+        cam_up = glm.rotate(cam_forward_xy, self.cam_states.phi, cam_right)
         cam_dir = cam_center - cam_pos
         cam_dir = cam_dir / glm.length(cam_dir)
         cam_rot = glm.quatLookAt(cam_dir, cam_up)
         return cam_pos, cam_rot
 
-    def update_view_mat(self, cam_pos: glm.vec3, cam_rot: glm.quat):
-        """Update camera extrinsic (view matrix).
-
-        Args:
-            cam_pos: glm.vec3 position.
-            cam_rot: glm.quat rotation.
-        """
-        # Camera to world transform matrix.
-        cam_mat = glm.translate(cam_pos) @ glm.mat4_cast(cam_rot)
-        self.view_mat = glm.inverse(cam_mat)
-
-    def update_perspective_mat(self):
+    def update_projection_mat(self):
         """Update camera intrinsic (perspective matrix)."""
-        if self.cam_modes[self.cam_mode_idx] == CameraMode.ORTHOGONAL:
-            cam_orth_width = self.cam_orth_scale
-            cam_orth_height = cam_orth_width / self.viewport_aspect
-            left = -cam_orth_width / 2
-            right = cam_orth_width / 2
-            bottom = -cam_orth_height / 2
-            top = cam_orth_height / 2
-            self.perspective_mat = glm.ortho(
-                left,
-                right,
-                bottom,
-                top,
-                self.cam_near,
-                self.cam_far
+        if self.cam_states.cam_modes[self.cam_states.cam_mode_idx] == CameraMode.ORTHOGONAL:
+            self.viewport.update_orthogonal_mat(
+                self.cam_states.cam_orth_scale,
+                self.cam_states.cam_near,
+                self.cam_states.cam_far
             )
-        elif self.cam_modes[self.cam_mode_idx] == CameraMode.PERSPECTIVE:
-            fov_y = (self.cam_perspective_fov / 180) * np.pi
-            self.perspective_mat = glm.perspective(
-                fov_y,
-                self.viewport_aspect,
-                self.cam_near,
-                self.cam_far
+        elif self.cam_states.cam_modes[self.cam_states.cam_mode_idx] == CameraMode.PERSPECTIVE:
+            self.viewport.update_perspective_mat(
+                self.cam_states.cam_perspective_fov,
+                self.cam_states.cam_near,
+                self.cam_states.cam_far
             )
         else:
             logger.error("Camera mode not supported yet.")
 
-    def render_viewport(self, time: float, frame_time: float):
-        """Viewport rendering.
+    def cam_control_window(self):
+        cam_states = self.cam_states
+        imgui.set_next_window_size_constraints(
+            size_min=(400, 100),
+            size_max=(imgui.FLT_MAX, imgui.FLT_MAX)
+        )
+        with imgui_ctx.begin("Mesh Viewer Camera Control", True) as (expanded, opened):
+            if not opened:
+                self.show_cam_control = False
 
-        Args:
-            time: time since program start.
-            frame_time: frame generation time.
-        """
-        fbo_stack.push(self.fbo)
+            imgui.push_item_width(-200)
 
-        # Clear screen.
-        self.fbo.clear(*self.clear_color, depth=1)
-        # Enabled depth test.
-        self.ctx.enable(moderngl.DEPTH_TEST | moderngl.CULL_FACE)
-        self.ctx.depth_func = "<="
+            imgui.separator_text("Camera Extrinsics")
 
-        # Calculate uniforms.
-        mat_M = self.model_mat
-        mat_V = self.view_mat
-        mat_P = self.perspective_mat
-        mat_MV = mat_V @ mat_M
-        mat_MVP = mat_P @ mat_MV
-        # Write unifroms.
-        if "mat_M" in self.program:
-            uniform_mat_M = self.program["mat_M"]
-            if type(uniform_mat_M) is moderngl.Uniform:
-                uniform_mat_M.write(mat_M.to_bytes())
-        if "mat_V" in self.program:
-            uniform_mat_V = self.program["mat_V"]
-            if type(uniform_mat_V) is moderngl.Uniform:
-                uniform_mat_V.write(mat_V.to_bytes())
-        if "mat_P" in self.program:
-            uniform_mat_P = self.program["mat_P"]
-            if type(uniform_mat_P) is moderngl.Uniform:
-                uniform_mat_P.write(mat_P.to_bytes())
-        if "mat_MV" in self.program:
-            uniform_mat_MV = self.program["mat_MV"]
-            if type(uniform_mat_MV) is moderngl.Uniform:
-                uniform_mat_MV.write(mat_MV.to_bytes())
-        if "mat_MVP" in self.program:
-            uniform_mat_MVP = self.program["mat_MVP"]
-            if type(uniform_mat_MVP) is moderngl.Uniform:
-                uniform_mat_MVP.write(mat_MVP.to_bytes())
+            changed, cam_states.rho = imgui.slider_float(
+                "Camera Distance (rho)",
+                cam_states.rho,
+                1, 20
+            )
+            if changed:
+                self.viewport.update_view_mat(*self.get_cam_transform())
+            _, self.scroll_sensitivity = imgui.slider_float(
+                "Zoom Scroll Sensitivity",
+                self.scroll_sensitivity,
+                0.1, 10
+            )
+            changed, cam_states.theta = imgui.drag_float(
+                "Camera Rotation-XY (theta)",
+                cam_states.theta,
+                0.1,
+            )
+            if changed:
+                # let theta in [-pi, pi]
+                cam_states.theta = (cam_states.theta +
+                                    np.pi) % (2 * np.pi) - np.pi
+                self.viewport.update_view_mat(*self.get_cam_transform())
+            changed, cam_states.phi = imgui.drag_float(
+                "Camera Rotation-Z (phi)",
+                cam_states.phi,
+                0.1
+            )
+            if changed:
+                cam_states.phi = (cam_states.phi + np.pi) % (2 * np.pi) - \
+                    np.pi  # let phi in [-pi, pi]
+                self.viewport.update_view_mat(*self.get_cam_transform())
 
-        # Render vao.
-        if len(self.vbo_list) > 0:
-            self.vao.render()
+            imgui.separator_text("Camera Intrinsics")
 
-        fbo_stack.pop()
+            changed, cam_states.cam_mode_idx = imgui.combo(
+                "Camera Mode", cam_states.cam_mode_idx, cam_states.cam_modes_str)
+            if changed:
+                self.update_projection_mat()
+            changed, cam_states.cam_near = imgui.slider_float(
+                "Near Clipping Distance", cam_states.cam_near, 0.001, 1)
+            if changed:
+                self.update_projection_mat()
+            changed, cam_states.cam_far = imgui.slider_float(
+                "Far Clipping Distance", cam_states.cam_far, 2, 100)
+            if changed:
+                self.update_projection_mat()
+            if cam_states.cam_modes[cam_states.cam_mode_idx] == CameraMode.ORTHOGONAL:
+                changed, cam_states.cam_orth_scale = imgui.slider_float(
+                    "Orthogonal Scale", cam_states.cam_orth_scale, 1, 20)
+                if changed:
+                    self.update_projection_mat()
+            elif cam_states.cam_modes[cam_states.cam_mode_idx] == CameraMode.PERSPECTIVE:
+                changed, cam_states.cam_perspective_fov = imgui.slider_float(
+                    "Verticle FOV", cam_states.cam_perspective_fov, 30, 120)
+                if changed:
+                    self.update_projection_mat()
+
+            imgui.pop_item_width()
+
+    def shading_control_window(self):
+        imgui.set_next_window_size_constraints(
+            size_min=(400, 100),
+            size_max=(imgui.FLT_MAX, imgui.FLT_MAX)
+        )
+        with imgui_ctx.begin("Mesh Viewer Shading Control", True) as (expanded, opened):
+            if not opened:
+                self.show_shading_control = False
+            # Shading.
+            imgui.push_item_width(-100)
+            changed, self.shader_idx = imgui.combo(
+                "Shader", self.shader_idx, self.avail_shaders)
+            if changed:
+                if self.shader_idx < len(builtin_viewer_shaders):
+                    self.load_builtin_shader()
+                else:
+                    self.load_custom_shader()
+
+            if self.shader_idx == len(builtin_viewer_shaders):
+                imgui.push_item_width(-200)
+                # Vertex source.
+                if self.custom_vert_path is None:
+                    vert_path = "None"
+                else:
+                    vert_path = str(self.custom_vert_path.resolve())
+                imgui.input_text("##vert_path", vert_path)
+
+                imgui.same_line()
+
+                if imgui.button("Load Vertex Shader", (-imgui.FLT_MIN, 0)) and self.vertex_shader_file_dialog is None:
+                    self.vertex_shader_file_dialog = portable_file_dialogs.open_file(
+                        "Open Vertex Shader",
+                        filters=["*.glsl"]
+                    )
+                if self.vertex_shader_file_dialog is not None and self.vertex_shader_file_dialog.ready():
+                    file_path = self.vertex_shader_file_dialog.result()
+                    if len(file_path) > 1:
+                        logger.warning(
+                            "Cannot load multiple shader files.")
+                    elif len(file_path) == 0:
+                        logger.info("No shader file selected.")
+                    else:
+                        self.custom_vert_path = pathlib.Path(file_path[0])
+                        logger.info(
+                            f"Selected shader file {self.custom_vert_path}.")
+                    self.vertex_shader_file_dialog = None
+
+                # Fragment source.
+                if self.custom_frag_path is None:
+                    frag_path = "None"
+                else:
+                    frag_path = str(self.custom_frag_path.resolve())
+                imgui.input_text("##frag_path", frag_path)
+
+                imgui.same_line()
+
+                if imgui.button("Load Fragment Shader", (-imgui.FLT_MIN, 0)) and self.fragment_shader_file_dialog is None:
+                    self.fragment_shader_file_dialog = portable_file_dialogs.open_file(
+                        "Open Fragment Shader",
+                        filters=["*.glsl"]
+                    )
+                if self.fragment_shader_file_dialog is not None and self.fragment_shader_file_dialog.ready():
+                    file_path = self.fragment_shader_file_dialog.result()
+                    if len(file_path) > 1:
+                        logger.warning(
+                            "Cannot load multiple shader files.")
+                    elif len(file_path) == 0:
+                        logger.info("No shader file selected.")
+                    else:
+                        self.custom_frag_path = pathlib.Path(file_path[0])
+                        logger.info(
+                            f"Selected shader file {self.custom_frag_path}.")
+                    self.fragment_shader_file_dialog = None
+                imgui.pop_item_width()
+
+                if imgui.button("Reload Shader", (-imgui.FLT_MIN, 0)):
+                    self.load_custom_shader()
+
+            imgui.pop_item_width()
 
     def render(self, time: float, frame_time: float):
         # Update mesh.
-        self.update_mesh()
-        self.update_shader()
+        if self.viewport.update_mesh(self.mesh_loader):
+            self.status_state.finish_status("Mesh Viewer")
+        self.viewport.update_shader()
 
         # Camera contol window.
         if self.show_cam_control:
-            imgui.set_next_window_size_constraints(
-                size_min=(400, 100),
-                size_max=(imgui.FLT_MAX, imgui.FLT_MAX)
-            )
-            with imgui_ctx.begin("Mesh Viewer Camera Control", True) as (expanded, opened):
-                if not opened:
-                    self.show_cam_control = False
-
-                imgui.push_item_width(-200)
-
-                imgui.separator_text("Camera Extrinsics")
-
-                changed, self.rho = imgui.slider_float(
-                    "Camera Distance (rho)",
-                    self.rho,
-                    1, 20
-                )
-                if changed:
-                    self.update_view_mat(*self.get_cam_transform())
-                _, self.scroll_sensitivity = imgui.slider_float(
-                    "Zoom Scroll Sensitivity",
-                    self.scroll_sensitivity,
-                    0.1, 10
-                )
-                changed, self.theta = imgui.drag_float(
-                    "Camera Rotation-XY (theta)",
-                    self.theta,
-                    0.1,
-                )
-                if changed:
-                    # let theta in [-pi, pi]
-                    self.theta = (self.theta + np.pi) % (2 * np.pi) - np.pi
-                    self.update_view_mat(*self.get_cam_transform())
-                changed, self.phi = imgui.drag_float(
-                    "Camera Rotation-Z (phi)",
-                    self.phi,
-                    0.1
-                )
-                if changed:
-                    self.phi = (self.phi + np.pi) % (2 * np.pi) - \
-                        np.pi  # let phi in [-pi, pi]
-                    self.update_view_mat(*self.get_cam_transform())
-
-                imgui.separator_text("Camera Intrinsics")
-
-                changed, self.cam_mode_idx = imgui.combo(
-                    "Camera Mode", self.cam_mode_idx, self.cam_modes_str)
-                if changed:
-                    self.update_perspective_mat()
-                changed, self.cam_near = imgui.slider_float(
-                    "Near Clipping Distance", self.cam_near, 0.001, 1)
-                if changed:
-                    self.update_perspective_mat()
-                changed, self.cam_far = imgui.slider_float(
-                    "Far Clipping Distance", self.cam_far, 2, 100)
-                if changed:
-                    self.update_perspective_mat()
-                if self.cam_modes[self.cam_mode_idx] == CameraMode.ORTHOGONAL:
-                    changed, self.cam_orth_scale = imgui.slider_float(
-                        "Orthogonal Scale", self.cam_orth_scale, 1, 20)
-                    if changed:
-                        self.update_perspective_mat()
-                elif self.cam_modes[self.cam_mode_idx] == CameraMode.PERSPECTIVE:
-                    changed, self.cam_perspective_fov = imgui.slider_float(
-                        "Verticle FOV", self.cam_perspective_fov, 30, 120)
-                    if changed:
-                        self.update_perspective_mat()
-
-                imgui.pop_item_width()
+            self.cam_control_window()
 
         # Shading control window.
         if self.show_shading_control:
-            imgui.set_next_window_size_constraints(
-                size_min=(400, 100),
-                size_max=(imgui.FLT_MAX, imgui.FLT_MAX)
-            )
-            with imgui_ctx.begin("Mesh Viewer Shading Control", True) as (expanded, opened):
-                if not opened:
-                    self.show_shading_control = False
-                # Shading.
-                imgui.push_item_width(-100)
-                changed, self.shader_idx = imgui.combo(
-                    "Shader", self.shader_idx, self.avail_shaders)
-                if changed:
-                    if self.shader_idx < len(shaders):
-                        self.load_shader(self.avail_shaders[self.shader_idx])
-
-                if self.shader_idx == len(shaders):
-                    imgui.push_item_width(-200)
-                    # Vertex source.
-                    if self.custom_vert_path is None:
-                        vert_path = "None"
-                    else:
-                        vert_path = str(self.custom_vert_path.resolve())
-                    imgui.input_text("##vert_path", vert_path)
-
-                    imgui.same_line()
-
-                    if imgui.button("Load Vertex Shader", (-imgui.FLT_MIN, 0)) and self.vertex_shader_file_dialog is None:
-                        self.vertex_shader_file_dialog = portable_file_dialogs.open_file(
-                            "Open Vertex Shader",
-                            filters=["*.glsl"]
-                        )
-                    if self.vertex_shader_file_dialog is not None and self.vertex_shader_file_dialog.ready():
-                        file_path = self.vertex_shader_file_dialog.result()
-                        if len(file_path) > 1:
-                            logger.warning(
-                                "Cannot load multiple shader files.")
-                        elif len(file_path) == 0:
-                            logger.info("No shader file selected.")
-                        else:
-                            self.custom_vert_path = pathlib.Path(file_path[0])
-                            logger.info(
-                                f"Selected shader file {self.custom_vert_path}.")
-                        self.vertex_shader_file_dialog = None
-
-                    # Fragment source.
-                    if self.custom_frag_path is None:
-                        frag_path = "None"
-                    else:
-                        frag_path = str(self.custom_frag_path.resolve())
-                    imgui.input_text("##frag_path", frag_path)
-
-                    imgui.same_line()
-
-                    if imgui.button("Load Fragment Shader", (-imgui.FLT_MIN, 0)) and self.fragment_shader_file_dialog is None:
-                        self.fragment_shader_file_dialog = portable_file_dialogs.open_file(
-                            "Open Fragment Shader",
-                            filters=["*.glsl"]
-                        )
-                    if self.fragment_shader_file_dialog is not None and self.fragment_shader_file_dialog.ready():
-                        file_path = self.fragment_shader_file_dialog.result()
-                        if len(file_path) > 1:
-                            logger.warning(
-                                "Cannot load multiple shader files.")
-                        elif len(file_path) == 0:
-                            logger.info("No shader file selected.")
-                        else:
-                            self.custom_frag_path = pathlib.Path(file_path[0])
-                            logger.info(
-                                f"Selected shader file {self.custom_frag_path}.")
-                        self.fragment_shader_file_dialog = None
-                    imgui.pop_item_width()
-
-                    if imgui.button("Reload Shader", (-imgui.FLT_MIN, 0)):
-                        self.load_custom_shader()
-
-                imgui.pop_item_width()
+            self.shading_control_window()
 
         # Mesh viewer main window.
         imgui.set_next_window_size_constraints(
@@ -531,15 +406,13 @@ class MeshViewerWindow(Window):
             x, y = imgui.get_cursor_pos()
             w, h = imgui.get_content_region_avail()
             new_viewport_size = (int(w), int(h))
-            if w > 0 and h > 0 and self.viewport_size != new_viewport_size:
-                self.viewport_size = new_viewport_size
-                self.viewport_aspect = w / h
-                self.resize_view_port()
-                self.update_perspective_mat()
-            self.render_viewport(time, frame_time)
+            if w > 0 and h > 0 and self.viewport.size != new_viewport_size:
+                self.resize_view_port(int(w), int(h))
+                self.update_projection_mat()
+            self.viewport.render(time, frame_time)
             # Viewport drawing.
             imgui.image(
-                self.render_texture.glo,
+                self.viewport.render_texture.glo,
                 (w, h),
                 (0, 1),
                 (1, 0)
@@ -551,26 +424,31 @@ class MeshViewerWindow(Window):
                 (w, h)
             )
             if imgui.is_item_hovered():
+                cam_states = self.cam_states
+                mouse_sensitivity = self.settings_observer.value.interface_settings.viewport_mouse_sensitivity
+                scroll_sensitivity = self.scroll_sensitivity
                 mouse_delta = self.io.mouse_delta
                 # Move camera with middle mouse.
                 if imgui.is_key_down(imgui.Key.mouse_middle):
-                    mouse_sensitivity = self.settings_observer.value.interface_settings.viewport_mouse_sensitivity
-                    self.theta -= mouse_delta.x / 100 * mouse_sensitivity
-                    self.theta = (self.theta + np.pi) % (2 * np.pi) - np.pi
-                    self.phi -= mouse_delta.y / 100 * mouse_sensitivity
-                    self.phi = (self.phi + np.pi) % (2 * np.pi) - \
+                    cam_states.theta -= mouse_delta.x / 100 * mouse_sensitivity
+                    cam_states.theta = (
+                        cam_states.theta + np.pi) % (2 * np.pi) - np.pi
+                    cam_states.phi -= mouse_delta.y / 100 * mouse_sensitivity
+                    cam_states.phi = (cam_states.phi + np.pi) % (2 * np.pi) - \
                         np.pi  # let phi in [-pi, pi]
-                    self.update_view_mat(*self.get_cam_transform())
+                    self.viewport.update_view_mat(*self.get_cam_transform())
                 scroll = self.io.mouse_wheel
                 if scroll != 0:
-                    if self.cam_modes[self.cam_mode_idx] == CameraMode.PERSPECTIVE:
-                        self.rho += scroll / 100 * \
-                            abs(self.rho) * self.scroll_sensitivity
-                        self.rho = glm.vec1(glm.clamp(self.rho, 1.0, 20.0)).x
-                    elif self.cam_modes[self.cam_mode_idx] == CameraMode.ORTHOGONAL:
-                        self.cam_orth_scale += scroll / 100 * \
-                            abs(self.cam_orth_scale) * self.scroll_sensitivity
-                        self.cam_orth_scale = glm.vec1(
-                            glm.clamp(self.cam_orth_scale, 1, 20)).x
-                    self.update_view_mat(*self.get_cam_transform())
-                    self.update_perspective_mat()
+                    if cam_states.cam_modes[cam_states.cam_mode_idx] == CameraMode.PERSPECTIVE:
+                        cam_states.rho += scroll / 100 * \
+                            abs(cam_states.rho) * scroll_sensitivity
+                        cam_states.rho = glm.vec1(
+                            glm.clamp(cam_states.rho, 1.0, 20.0)).x
+                    elif cam_states.cam_modes[cam_states.cam_mode_idx] == CameraMode.ORTHOGONAL:
+                        cam_states.cam_orth_scale += scroll / 100 * \
+                            abs(cam_states.cam_orth_scale) * \
+                            scroll_sensitivity
+                        cam_states.cam_orth_scale = glm.vec1(
+                            glm.clamp(cam_states.cam_orth_scale, 1, 20)).x
+                    self.viewport.update_view_mat(*self.get_cam_transform())
+                    self.update_projection_mat()
