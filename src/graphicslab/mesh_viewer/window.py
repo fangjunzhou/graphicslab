@@ -108,6 +108,7 @@ class MeshViewerWindow(Window):
         self.settings_state = settings_state
         self.settings_observer = SettingsObserver()
         self.settings_state.attach(self.settings_observer)
+        self.settings_observer.update(self.settings_state.value)
         self.status_state = status_state
 
         # Initialize viewport.
