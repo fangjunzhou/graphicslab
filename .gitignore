@@ -1,10 +1,11 @@
 # Misc
 .DS_Store
 .direnv/
-assets/
+temp/
 
 # Python
 __pycache__/
 .virtual_documents
 .ropeproject
 .ipynb_checkpoints
+.venv

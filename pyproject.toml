@@ -1,7 +1,7 @@
 [project]
-name = "moderngl_playground"
+name = "graphicslab"
 version = "0.1.0"
-description = "A playground project for python moderngl library"
+description = "A experimental render environment with python moderngl library."
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
@@ -36,4 +36,4 @@ using = "PEP631"
 py-observer = { git = "https://github.com/fangjunzhou/python-observer" }
 
 [project.scripts]
-start = "moderngl_playground.__main__:main"
+start = "graphicslab.__main__:main"

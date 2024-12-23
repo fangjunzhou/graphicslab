@@ -1,5 +1,5 @@
 {
-  description = "ModernGL Playground";
+  description = "GraphicsLab";
 
   inputs =
     {
