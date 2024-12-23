@@ -6,7 +6,7 @@ A experimental render environment with python moderngl library.
 
 ## Install
 
-- Fork this project by
+- Clone this project by
 
 ```bash
 git clone git@github.com:fangjunzhou/graphicslab.git
