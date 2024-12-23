@@ -433,6 +433,7 @@ dev = [
     { name = "autopep8" },
     { name = "debugpy" },
     { name = "jupyterlab" },
+    { name = "uv" },
 ]
 
 [package.metadata]
@@ -454,6 +455,7 @@ dev = [
     { name = "autopep8", specifier = ">=2.3.1" },
     { name = "debugpy", specifier = ">=1.8.11" },
     { name = "jupyterlab", specifier = ">=4.3.3" },
+    { name = "uv", specifier = ">=0.5.11" },
 ]
 
 [[package]]
@@ -533,7 +535,7 @@ name = "ipykernel"
 version = "6.29.5"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "appnope", marker = "platform_system == 'Darwin'" },
+    { name = "appnope", marker = "sys_platform == 'darwin'" },
     { name = "comm" },
     { name = "debugpy" },
     { name = "ipython" },
@@ -998,56 +1000,6 @@ wheels = [
 ]
 
 [[package]]
-<<<<<<< HEAD
-name = "moderngl-playground"
-version = "0.1.0"
-source = { editable = "." }
-dependencies = [
-    { name = "appdirs" },
-    { name = "dataclasses-json" },
-    { name = "imgui-bundle" },
-    { name = "moderngl" },
-    { name = "moderngl-window", extra = ["imgui"] },
-    { name = "numpy" },
-    { name = "pillow" },
-    { name = "py-observer" },
-    { name = "pyglm" },
-    { name = "trimesh", extra = ["easy"] },
-]
-
-[package.dev-dependencies]
-dev = [
-    { name = "autopep8" },
-    { name = "debugpy" },
-    { name = "jupyterlab" },
-    { name = "uv" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "appdirs", specifier = ">=1.4.4" },
-    { name = "dataclasses-json", specifier = ">=0.6.7" },
-    { name = "imgui-bundle", specifier = ">=1.6.1" },
-    { name = "moderngl", specifier = ">=5.12.0" },
-    { name = "moderngl-window", extras = ["imgui"], specifier = ">=3.0.3" },
-    { name = "numpy", specifier = ">=2.2.0" },
-    { name = "pillow", specifier = ">=11.0.0" },
-    { name = "py-observer", git = "https://github.com/fangjunzhou/python-observer" },
-    { name = "pyglm", specifier = ">=2.7.3" },
-    { name = "trimesh", extras = ["easy"], specifier = ">=4.5.3" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "autopep8", specifier = ">=2.3.1" },
-    { name = "debugpy", specifier = ">=1.8.11" },
-    { name = "jupyterlab", specifier = ">=4.3.3" },
-    { name = "uv", specifier = ">=0.5.11" },
-]
-
-[[package]]
-=======
->>>>>>> 08e95613dcd2e36ccf7b24454b6588e4ec2bf098
 name = "moderngl-window"
 version = "3.0.3"
 source = { registry = "https://pypi.org/simple" }
