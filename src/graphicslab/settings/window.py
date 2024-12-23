@@ -9,6 +9,7 @@ from graphicslab.settings.decorator import SettingsField, FieldStyle
 from graphicslab.settings.settings import Settings, SettingsState, SettingsObserver
 from graphicslab.settings.utils import save_settings
 
+
 def render_int_field(field: SettingsField[int]):
     if field.style == FieldStyle.INPUT:
         changed, field.value = imgui.input_int(
@@ -36,6 +37,7 @@ def render_int_field(field: SettingsField[int]):
         # Unsupported style.
         changed = False
     return changed
+
 
 def render_float_field(field: SettingsField[float]):
     if field.style == FieldStyle.INPUT:
@@ -65,6 +67,7 @@ def render_float_field(field: SettingsField[float]):
         # Unsupported style.
         changed = False
     return changed
+
 
 def render_bool_field(field: SettingsField[bool]):
     changed, field.value = imgui.checkbox(
@@ -134,10 +137,13 @@ class SettingsWindow(Window):
                     tab_name = tab_field.disp_name
                     if imgui.begin_tab_item(tab_name)[0]:
                         for settings_field in dataclasses.fields(tab_field):
-                            settings_field = getattr(tab_field, settings_field.name)
+                            settings_field = getattr(
+                                tab_field, settings_field.name)
                             if type(settings_field) is SettingsField:
-                                text_width = imgui.calc_text_size(settings_field.disp_name).x
-                                imgui.push_item_width(-text_width - imgui_style.frame_padding.x)
+                                text_width = imgui.calc_text_size(
+                                    settings_field.disp_name).x
+                                imgui.push_item_width(-text_width -
+                                                      imgui_style.frame_padding.x)
                                 if render_settings_field(settings_field):
                                     self.unsave = True
                                 imgui.pop_item_width()

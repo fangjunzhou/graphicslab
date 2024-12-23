@@ -12,8 +12,8 @@ from graphicslab.settings.decorator import settings_field, SettingsField, FieldS
 @dataclass
 class InterfaceSettings(DataClassJsonMixin):
     disp_name: str = "Interface Settings"
-    show_fps_counter: SettingsField[bool] = settings_field(False, "Show FPS Counter")
-    revert_mouse_scroll: SettingsField[bool] = settings_field(False, "Revert Mouse Scroll")
+    show_fps_counter: SettingsField[bool] = settings_field(
+        False, "Show FPS Counter")
     viewport_mouse_sensitivity: SettingsField[float] = settings_field(
         1.0,
         "Viewport Mouse Sensitivity",
@@ -58,7 +58,6 @@ class ExampleSettings(DataClassJsonMixin):
         FieldStyle.DRAG
     )
     bool_field: SettingsField[bool] = settings_field(False, "Boolean Field")
-
 
 
 @dataclass

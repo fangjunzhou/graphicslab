@@ -25,7 +25,8 @@ def load_settings() -> Settings:
             try:
                 settings = Settings.schema().loads(config_json)
             except:
-                logger.warning("Settings schema corrupted, overriding with default settings.")
+                logger.warning(
+                    "Settings schema corrupted, overriding with default settings.")
                 settings = Settings()
                 save_settings(settings)
     return settings  # type: ignore

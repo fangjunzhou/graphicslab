@@ -3,14 +3,16 @@ from dataclasses_json import DataClassJsonMixin, config
 from enum import Enum
 
 from imgui_bundle import imgui
+from marshmallow.fields import Field
 
 
 SettingsFieldType = int | float | bool | str
 
+
 class FieldStyle(Enum):
     INPUT = 0
     SLIDER = 1
-    DRAG = 2    
+    DRAG = 2
 
 
 @dataclass
@@ -20,8 +22,8 @@ class SettingsField[T: SettingsFieldType](DataClassJsonMixin):
     style: FieldStyle
 
     # ImGui flags.
-    slider_flags: imgui.SliderFlags_= field(
-        default_factory=lambda:imgui.SliderFlags_.none
+    slider_flags: int = field(
+        default_factory=lambda: imgui.SliderFlags_.none.value
     )
 
     # Float fields
@@ -34,6 +36,7 @@ class SettingsField[T: SettingsFieldType](DataClassJsonMixin):
     v_min_i: int = 0
     v_max_i: int = 10
 
+
 def settings_field[T: SettingsFieldType](
     value: T,
     disp_name: str,
@@ -44,6 +47,6 @@ def settings_field[T: SettingsFieldType](
     return field(
         default_factory=lambda: settings_field,
         metadata=config(
-            mm_field=SettingsField[T]
+            mm_field=Field()
         )
     )
