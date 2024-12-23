@@ -29,7 +29,7 @@ class Viewport:
 
     shader: Shader
     program: Program
-    vbo_list: List[Tuple[Buffer, str, Tuple[str, ...]]]
+    vbo_list: List[Tuple[Buffer, str, str]]
     ibo: Buffer | None = None
     vao: VertexArray
 
@@ -80,14 +80,14 @@ class Viewport:
             (
                 self.ctx.buffer(mesh_loader.vertex_buf),
                 "3f",
-                ("in_vert",)
+                "in_vert"
             )
         )
         self.vbo_list.append(
             (
                 self.ctx.buffer(mesh_loader.normal_buf),
                 "3f",
-                ("in_norm",)
+                "in_norm"
             )
         )
         self.ibo = self.ctx.buffer(mesh_loader.index_buf)
@@ -97,8 +97,9 @@ class Viewport:
     def assemble_vao(self):
         """Assemble VAO using shader, VBO, and IBO"""
         content_buf = []
-        for vbo, buf_fmt, in_params in self.vbo_list:
-            content_buf.append((vbo, buf_fmt, *in_params))
+        for vbo, buf_fmt, in_param in self.vbo_list:
+            if in_param in self.program:
+                content_buf.append((vbo, buf_fmt, in_param))
         self.vao = self.ctx.vertex_array(
             self.program,
             content_buf,

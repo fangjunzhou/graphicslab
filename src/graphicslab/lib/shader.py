@@ -6,8 +6,16 @@ import threading
 from dataclasses_json.api import A
 import moderngl
 
+from graphicslab.consts import assets_path
+
 
 logger = logging.getLogger(__name__)
+
+
+error_vert_path = assets_path / "shaders" / "error" / "vert.glsl"
+error_vert_src = error_vert_path.read_text()
+error_frag_path = assets_path / "shaders" / "error" / "frag.glsl"
+error_frag_src = error_frag_path.read_text()
 
 
 class Shader:
@@ -54,10 +62,7 @@ class Shader:
             raise RuntimeError(f"Fragment shader loaded failed.")
 
         self.ctx = ctx
-        self.program = ctx.program(
-            vertex_shader=self.vert_src,
-            fragment_shader=self.frag_src
-        )
+        self.compile_shader()
 
     def reload_shader(self):
         vert_change = self.vert_last_change
@@ -77,9 +82,20 @@ class Shader:
             changed = True
         if changed:
             logger.info("Source changed detected, reloading shader program.")
+            self.compile_shader()
+            return True
+        return False
+
+    def compile_shader(self):
+        try:
             self.program = self.ctx.program(
                 vertex_shader=self.vert_src,
                 fragment_shader=self.frag_src
             )
-            return True
-        return False
+        except Exception as e:
+            logger.error(f"Shader compilation failed.")
+            logger.error(self.ctx.error)
+            self.program = self.ctx.program(
+                vertex_shader=error_vert_src,
+                fragment_shader=error_frag_src
+            )
