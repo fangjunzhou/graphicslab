@@ -427,6 +427,8 @@ class MeshViewerWindow(Window):
                 cam_states = self.cam_states
                 mouse_sensitivity = self.settings_observer.value.interface_settings.viewport_mouse_sensitivity.value
                 scroll_sensitivity = self.scroll_sensitivity
+                if self.settings_observer.value.interface_settings.revert_mouse_scroll.value:
+                    scroll_sensitivity = -scroll_sensitivity
                 mouse_delta = self.io.mouse_delta
                 # Move camera with middle mouse.
                 if imgui.is_key_down(imgui.Key.mouse_middle):
@@ -440,12 +442,12 @@ class MeshViewerWindow(Window):
                 scroll = self.io.mouse_wheel
                 if scroll != 0:
                     if cam_states.cam_modes[cam_states.cam_mode_idx] == CameraMode.PERSPECTIVE:
-                        cam_states.rho += scroll / 100 * \
+                        cam_states.rho -= scroll / 100 * \
                             abs(cam_states.rho) * scroll_sensitivity
                         cam_states.rho = glm.vec1(
                             glm.clamp(cam_states.rho, 1.0, 20.0)).x
                     elif cam_states.cam_modes[cam_states.cam_mode_idx] == CameraMode.ORTHOGONAL:
-                        cam_states.cam_orth_scale += scroll / 100 * \
+                        cam_states.cam_orth_scale -= scroll / 100 * \
                             abs(cam_states.cam_orth_scale) * \
                             scroll_sensitivity
                         cam_states.cam_orth_scale = glm.vec1(

@@ -14,6 +14,8 @@ class InterfaceSettings(DataClassJsonMixin):
     disp_name: str = "Interface Settings"
     show_fps_counter: SettingsField[bool] = settings_field(
         False, "Show FPS Counter")
+    revert_mouse_scroll: SettingsField[bool] = settings_field(
+        False, "Revert Mouse Scroll")
     viewport_mouse_sensitivity: SettingsField[float] = settings_field(
         1.0,
         "Viewport Mouse Sensitivity",
