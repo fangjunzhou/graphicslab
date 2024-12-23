@@ -17,5 +17,5 @@ void main() {
   // Diffuse light strength.
   float light_strength = clamp(dot(light_dir_world, vert_norm_world.xyz), 0, 1);
   vec3 light_color = vec3(1, 1, 1);
-  frag_color = vec4(light_colo * light_strength, 1);
+  frag_color = vec4(light_color * light_strength, 1);
 }
