@@ -554,7 +554,7 @@ class MeshViewerWindow(Window):
                 mouse_delta = self.io.mouse_delta
                 # Move camera with middle mouse.
                 if imgui.is_key_down(imgui.Key.mouse_middle):
-                    mouse_sensitivity = self.settings_observer.value.interface_settings.viewport_mouse_sensitivity
+                    mouse_sensitivity = self.settings_observer.value.interface_settings.viewport_mouse_sensitivity.value
                     self.theta -= mouse_delta.x / 100 * mouse_sensitivity
                     self.theta = (self.theta + np.pi) % (2 * np.pi) - np.pi
                     self.phi -= mouse_delta.y / 100 * mouse_sensitivity

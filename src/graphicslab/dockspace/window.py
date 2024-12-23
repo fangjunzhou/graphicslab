@@ -219,7 +219,7 @@ class Dockspace:
                     _, self.show_status_window = imgui.menu_item(
                         f"Status: {num_jobs} jobs working", "", self.show_status_window)
                 # Frame rate.
-                if self.settings_observer.value.interface_settings.show_fps_counter:
+                if self.settings_observer.value.interface_settings.show_fps_counter.value:
                     self.frame_time_buf[self.frame_time_buf_idx] = frame_time
                     self.frame_time_buf_idx = (
                         self.frame_time_buf_idx + 1) % self.FRAME_TIME_BUF_SIZE

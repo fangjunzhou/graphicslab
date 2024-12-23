@@ -5,8 +5,88 @@ import copy
 from imgui_bundle import imgui, imgui_ctx
 
 from graphicslab.window import Window
+from graphicslab.settings.decorator import SettingsField, FieldStyle
 from graphicslab.settings.settings import Settings, SettingsState, SettingsObserver
 from graphicslab.settings.utils import save_settings
+
+def render_int_field(field: SettingsField[int]):
+    if field.style == FieldStyle.INPUT:
+        changed, field.value = imgui.input_int(
+            field.disp_name,
+            field.value,
+        )
+    elif field.style == FieldStyle.SLIDER:
+        changed, field.value = imgui.slider_int(
+            field.disp_name,
+            field.value,
+            field.v_min_i,
+            field.v_max_i,
+            flags=field.slider_flags
+        )
+    elif field.style == FieldStyle.DRAG:
+        changed, field.value = imgui.drag_int(
+            field.disp_name,
+            field.value,
+            field.speed,
+            field.v_min_i,
+            field.v_max_i,
+            flags=field.slider_flags
+        )
+    else:
+        # Unsupported style.
+        changed = False
+    return changed
+
+def render_float_field(field: SettingsField[float]):
+    if field.style == FieldStyle.INPUT:
+        changed, field.value = imgui.input_float(
+            field.disp_name,
+            field.value,
+            field.step
+        )
+    elif field.style == FieldStyle.SLIDER:
+        changed, field.value = imgui.slider_float(
+            field.disp_name,
+            field.value,
+            field.v_min_f,
+            field.v_max_f,
+            flags=field.slider_flags
+        )
+    elif field.style == FieldStyle.DRAG:
+        changed, field.value = imgui.drag_float(
+            field.disp_name,
+            field.value,
+            field.speed,
+            field.v_min_f,
+            field.v_max_f,
+            flags=field.slider_flags
+        )
+    else:
+        # Unsupported style.
+        changed = False
+    return changed
+
+def render_bool_field(field: SettingsField[bool]):
+    changed, field.value = imgui.checkbox(
+        field.disp_name,
+        field.value
+    )
+    return changed
+
+
+def render_settings_field(field: SettingsField):
+    if type(field.value) is int:
+        return render_int_field(field)
+    elif type(field.value) is float:
+        return render_float_field(field)
+    elif type(field.value) is bool:
+        return render_bool_field(field)
+    elif type(field.value) is str:
+        # TODO: str field rendering.
+        return False
+    else:
+        # Unsupported field type.
+        return False
 
 
 class SettingsWindow(Window):
@@ -45,22 +125,22 @@ class SettingsWindow(Window):
 
             # -------------------- Interface Settings -------------------- #
 
-            imgui.separator_text("Interface Settings")
-
             imgui.push_item_width(-200)
 
-            changed, self.unsaved_settings.interface_settings.show_fps_counter = imgui.checkbox(
-                "Show FPS Counter", self.unsaved_settings.interface_settings.show_fps_counter)
-            if changed:
-                self.unsave = True
-
-            changed, self.unsaved_settings.interface_settings.viewport_mouse_sensitivity = imgui.slider_float(
-                "Viewport Mouse Sensitivity",
-                self.unsaved_settings.interface_settings.viewport_mouse_sensitivity,
-                0.1, 10,
-                flags=imgui.SliderFlags_.logarithmic.value
-            )
-            if changed:
-                self.unsave = True
+            imgui_style = imgui.get_style()
+            with imgui_ctx.begin_tab_bar("##settings_tab", imgui.TableFlags_.none.value):
+                for tab_field in dataclasses.fields(self.unsaved_settings):
+                    tab_field = getattr(self.unsaved_settings, tab_field.name)
+                    tab_name = tab_field.disp_name
+                    if imgui.begin_tab_item(tab_name)[0]:
+                        for settings_field in dataclasses.fields(tab_field):
+                            settings_field = getattr(tab_field, settings_field.name)
+                            if type(settings_field) is SettingsField:
+                                text_width = imgui.calc_text_size(settings_field.disp_name).x
+                                imgui.push_item_width(-text_width - imgui_style.frame_padding.x)
+                                if render_settings_field(settings_field):
+                                    self.unsave = True
+                                imgui.pop_item_width()
+                        imgui.end_tab_item()
 
             imgui.pop_item_width()

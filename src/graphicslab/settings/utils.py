@@ -22,7 +22,12 @@ def load_settings() -> Settings:
         logger.info(f"Loading config from {config_path}.")
         with open(config_path, "r") as config_file:
             config_json = config_file.read()
-            settings = Settings.schema().loads(config_json)
+            try:
+                settings = Settings.schema().loads(config_json)
+            except:
+                logger.warning("Settings schema corrupted, overriding with default settings.")
+                settings = Settings()
+                save_settings(settings)
     return settings  # type: ignore
 
 
