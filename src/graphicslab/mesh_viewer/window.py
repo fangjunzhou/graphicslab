@@ -77,7 +77,7 @@ class MeshViewerWindow(Window):
 
     # Camera control.
     show_cam_control: bool = False
-    scroll_sensitivity = 1
+    zoom_sensitivity = 1
 
     # Shading control.
     show_shading_control: bool = False
@@ -213,9 +213,9 @@ class MeshViewerWindow(Window):
             )
             if changed:
                 self.viewport.update_view_mat(*self.get_cam_transform())
-            _, self.scroll_sensitivity = imgui.slider_float(
-                "Zoom Scroll Sensitivity",
-                self.scroll_sensitivity,
+            _, self.zoom_sensitivity = imgui.slider_float(
+                "Zoom Sensitivity",
+                self.zoom_sensitivity,
                 0.1, 10
             )
             changed, cam_states.theta = imgui.drag_float(
@@ -427,31 +427,49 @@ class MeshViewerWindow(Window):
             if imgui.is_item_hovered():
                 cam_states = self.cam_states
                 mouse_sensitivity = self.settings_observer.value.interface_settings.viewport_mouse_sensitivity.value
-                scroll_sensitivity = self.scroll_sensitivity
-                if self.settings_observer.value.interface_settings.revert_mouse_scroll.value:
+                scroll_sensitivity = self.zoom_sensitivity
+                if self.settings_observer.value.interface_settings.revert_zoom.value:
                     scroll_sensitivity = -scroll_sensitivity
                 mouse_delta = self.io.mouse_delta
-                # Move camera with middle mouse.
-                if imgui.is_key_down(imgui.Key.mouse_middle):
-                    cam_states.theta -= mouse_delta.x / 100 * mouse_sensitivity
+                if self.settings_observer.value.interface_settings.use_trackpad.value:
+                    # Trackpad camera control.
+                    # FIX: No horizontal scroll.
+                    scroll_x = self.io.mouse_wheel_h
+                    scroll_y = self.io.mouse_wheel
+                    logger.info(f"Scroll: ({scroll_x}, {scroll_y})")
+                    cam_states.theta -= scroll_x / 100 * mouse_sensitivity
                     cam_states.theta = (
                         cam_states.theta + np.pi) % (2 * np.pi) - np.pi
-                    cam_states.phi -= mouse_delta.y / 100 * mouse_sensitivity
+                    cam_states.phi -= scroll_y / 100 * mouse_sensitivity
                     cam_states.phi = (cam_states.phi + np.pi) % (2 * np.pi) - \
                         np.pi  # let phi in [-pi, pi]
-                    self.viewport.update_view_mat(*self.get_cam_transform())
-                scroll = self.io.mouse_wheel
-                if scroll != 0:
-                    if cam_states.cam_modes[cam_states.cam_mode_idx] == CameraMode.PERSPECTIVE:
-                        cam_states.rho -= scroll / 100 * \
-                            abs(cam_states.rho) * scroll_sensitivity
-                        cam_states.rho = glm.vec1(
-                            glm.clamp(cam_states.rho, 1.0, 20.0)).x
-                    elif cam_states.cam_modes[cam_states.cam_mode_idx] == CameraMode.ORTHOGONAL:
-                        cam_states.cam_orth_scale -= scroll / 100 * \
-                            abs(cam_states.cam_orth_scale) * \
-                            scroll_sensitivity
-                        cam_states.cam_orth_scale = glm.vec1(
-                            glm.clamp(cam_states.cam_orth_scale, 1, 20)).x
-                    self.viewport.update_view_mat(*self.get_cam_transform())
-                    self.update_projection_mat()
+                    self.viewport.update_view_mat(
+                        *self.get_cam_transform())
+                else:
+                    # Move camera with middle mouse.
+                    if imgui.is_key_down(imgui.Key.mouse_middle):
+                        cam_states.theta -= mouse_delta.x / 100 * mouse_sensitivity
+                        cam_states.theta = (
+                            cam_states.theta + np.pi) % (2 * np.pi) - np.pi
+                        cam_states.phi -= mouse_delta.y / 100 * mouse_sensitivity
+                        cam_states.phi = (cam_states.phi + np.pi) % (2 * np.pi) - \
+                            np.pi  # let phi in [-pi, pi]
+                        self.viewport.update_view_mat(
+                            *self.get_cam_transform())
+                    # Zoom camera with scroll wheel
+                    scroll = self.io.mouse_wheel
+                    if scroll != 0:
+                        if cam_states.cam_modes[cam_states.cam_mode_idx] == CameraMode.PERSPECTIVE:
+                            cam_states.rho -= scroll / 100 * \
+                                abs(cam_states.rho) * scroll_sensitivity
+                            cam_states.rho = glm.vec1(
+                                glm.clamp(cam_states.rho, 1.0, 20.0)).x
+                        elif cam_states.cam_modes[cam_states.cam_mode_idx] == CameraMode.ORTHOGONAL:
+                            cam_states.cam_orth_scale -= scroll / 100 * \
+                                abs(cam_states.cam_orth_scale) * \
+                                scroll_sensitivity
+                            cam_states.cam_orth_scale = glm.vec1(
+                                glm.clamp(cam_states.cam_orth_scale, 1, 20)).x
+                        self.viewport.update_view_mat(
+                            *self.get_cam_transform())
+                        self.update_projection_mat()
