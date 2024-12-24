@@ -20,6 +20,7 @@ class SettingsField[T: SettingsFieldType](DataClassJsonMixin):
     value: T
     disp_name: str
     style: FieldStyle
+    tooltip: str = ""
 
     # ImGui flags.
     slider_flags: int = field(
@@ -41,9 +42,16 @@ def settings_field[T: SettingsFieldType](
     value: T,
     disp_name: str,
     style: FieldStyle = FieldStyle.INPUT,
+    tooltip: str = "",
     **kwargs
 ):
-    settings_field = SettingsField(value, disp_name, style, **kwargs)
+    settings_field = SettingsField(
+        value,
+        disp_name,
+        style,
+        tooltip=tooltip,
+        **kwargs
+    )
     return field(
         default_factory=lambda: settings_field,
         metadata=config(

@@ -14,8 +14,16 @@ class InterfaceSettings(DataClassJsonMixin):
     disp_name: str = "Interface Settings"
     show_fps_counter: SettingsField[bool] = settings_field(
         False, "Show FPS Counter")
-    revert_mouse_scroll: SettingsField[bool] = settings_field(
-        False, "Revert Mouse Scroll")
+    revert_zoom: SettingsField[bool] = settings_field(
+        False,
+        "Revert Zoom",
+        tooltip="Revert mouse scroll direction when zoom."
+    )
+    use_trackpad: SettingsField[bool] = settings_field(
+        False,
+        "Use Trackpad",
+        tooltip="Use trackpad for viewport control. This will disable mouse middle click."
+    )
     viewport_mouse_sensitivity: SettingsField[float] = settings_field(
         1.0,
         "Viewport Mouse Sensitivity",

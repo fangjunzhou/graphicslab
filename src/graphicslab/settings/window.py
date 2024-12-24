@@ -78,18 +78,24 @@ def render_bool_field(field: SettingsField[bool]):
 
 
 def render_settings_field(field: SettingsField):
+    changed = False
+    # Render field.
     if type(field.value) is int:
-        return render_int_field(field)
+        changed = render_int_field(field)
     elif type(field.value) is float:
-        return render_float_field(field)
+        changed = render_float_field(field)
     elif type(field.value) is bool:
-        return render_bool_field(field)
+        changed = render_bool_field(field)
     elif type(field.value) is str:
         # TODO: str field rendering.
-        return False
+        pass
     else:
         # Unsupported field type.
-        return False
+        pass
+    # Render help message.
+    if field.tooltip != "":
+        imgui.set_item_tooltip(field.tooltip)
+    return changed
 
 
 class SettingsWindow(Window):
