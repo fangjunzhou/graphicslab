@@ -131,8 +131,8 @@ class App(WindowConfig):
         self.windows_remove_queue.append(key)
 
     def on_resize(self, width: int, height: int):
-        logger.info(f"Window resized.")
         self.imgui_renderer.resize(width, height)
+        # FIX: Disable render on resize for pyglet.
         self.wnd.render(self.timer.time, self.timer.time - self.window_time)
         self.wnd.swap_buffers()
 
