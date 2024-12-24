@@ -9,8 +9,10 @@ import argparse
 import logging
 
 import moderngl
+import moderngl_window
 from moderngl_window.context.base import WindowConfig
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
+from moderngl_window.conf import settings
 from imgui_bundle import imgui
 
 from graphicslab.consts import assets_path
@@ -28,6 +30,7 @@ class App(WindowConfig):
     # ---------------------- Window Config  ---------------------- #
 
     title = "Graphics Lab"
+    resizable = True
     aspect_ratio = None
 
     # ------------------------ App States ------------------------ #
@@ -39,6 +42,9 @@ class App(WindowConfig):
     default_font: imgui.ImFont
     default_font_size: float = 16
     default_font_scale: float = 1
+
+    window_time: float = 0
+    window_pos: tuple[int, int] = (0, 0)
 
     settings_state: SettingsState = SettingsState()
 
@@ -125,7 +131,10 @@ class App(WindowConfig):
         self.windows_remove_queue.append(key)
 
     def on_resize(self, width: int, height: int):
+        logger.info(f"Window resized.")
         self.imgui_renderer.resize(width, height)
+        self.wnd.render(self.timer.time, self.timer.time - self.window_time)
+        self.wnd.swap_buffers()
 
     def on_key_event(self, key, action, modifiers):
         self.imgui_renderer.key_event(key, action, modifiers)
@@ -149,6 +158,7 @@ class App(WindowConfig):
         self.imgui_renderer.unicode_char_entered(char)
 
     def on_render(self, time: float, frame_time: float):
+        self.window_time = time
         # Handle high dpi screen.
         font_scale = self.wnd.pixel_ratio
         if self.default_font_scale != font_scale:
