@@ -166,7 +166,7 @@ class Dockspace:
         side_bar_height = imgui.get_frame_height()
         imgui.set_next_window_pos((0, side_bar_height))
         imgui.set_next_window_size(
-            (self.wnd.viewport_size[0], self.wnd.viewport_size[1] - 2 * side_bar_height))
+            (self.wnd.size[0], self.wnd.size[1] - 2 * side_bar_height))
         window_flags = (imgui.WindowFlags_.no_title_bar.value |
                         imgui.WindowFlags_.no_collapse.value |
                         imgui.WindowFlags_.no_resize.value |
@@ -197,9 +197,9 @@ class Dockspace:
         # ------------------------ Status Bar ------------------------ #
 
         imgui.set_next_window_pos(
-            (0, self.wnd.viewport_size[1] - side_bar_height))
+            (0, self.wnd.size[1] - side_bar_height))
         imgui.set_next_window_size(
-            (self.wnd.viewport_size[0], side_bar_height))
+            (self.wnd.size[0], side_bar_height))
         window_flags = (imgui.WindowFlags_.no_title_bar.value |
                         imgui.WindowFlags_.no_collapse.value |
                         imgui.WindowFlags_.menu_bar.value |

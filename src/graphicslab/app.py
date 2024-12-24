@@ -2,6 +2,7 @@
 App window class.
 """
 
+import pathlib
 from typing import Deque, Dict
 from collections import deque
 import argparse
@@ -34,7 +35,10 @@ class App(WindowConfig):
     logger: logging.Logger
     io: imgui.IO
     imgui_renderer: ModernglWindowRenderer
+    default_font_path: pathlib.Path
     default_font: imgui.ImFont
+    default_font_size: float = 16
+    default_font_scale: float = 1
 
     settings_state: SettingsState = SettingsState()
 
@@ -81,12 +85,12 @@ class App(WindowConfig):
         # Initialize FBO stack.
         fbo_stack.push(self.wnd.fbo)
         # Load font.
-        font_path = assets_path / "fonts" / \
+        self.default_font_path = assets_path / "fonts" / \
             "JetBrainsMono" / "JetBrainsMonoNerdFont-Regular.ttf"
-        logger.info(f"Loading font from {font_path}")
+        logger.info(f"Loading font from {self.default_font_path}")
         self.default_font = self.io.fonts.add_font_from_file_ttf(
-            str(font_path),
-            16
+            str(self.default_font_path),
+            self.default_font_size
         )
         self.imgui_renderer.refresh_font_texture()
         # Initialize dockspace.
@@ -145,6 +149,18 @@ class App(WindowConfig):
         self.imgui_renderer.unicode_char_entered(char)
 
     def on_render(self, time: float, frame_time: float):
+        # Handle high dpi screen.
+        font_scale = self.wnd.pixel_ratio
+        if self.default_font_scale != font_scale:
+            logger.info("Display DPI scale changed detected, reloading fonts.")
+            self.default_font = self.io.fonts.add_font_from_file_ttf(
+                str(self.default_font_path),
+                self.default_font_size * font_scale
+            )
+            self.default_font.scale = 1 / font_scale
+            self.default_font_scale = font_scale
+            self.imgui_renderer.refresh_font_texture()
+
         # ImGui render cycle start.
         imgui.new_frame()
         imgui.push_font(self.default_font)
