@@ -72,7 +72,15 @@ class Viewport:
         self.assemble_vao()
         return True
 
-    def update_mesh(self, mesh_loader: MeshLoader):
+    def load_mesh(self, mesh_loader: MeshLoader):
+        """Load mesh to OpenGL
+
+        Args:
+            mesh_loader: CPU mesh loader.
+
+        Returns:
+            True if mesh is loaded.
+        """
         if not mesh_loader.is_loaded():
             return False
         self.vbo_list = []
