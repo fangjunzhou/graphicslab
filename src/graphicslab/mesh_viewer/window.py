@@ -8,7 +8,6 @@ import glm
 from imgui_bundle import imgui, imgui_ctx, portable_file_dialogs
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
 import numpy as np
-import trimesh
 
 import moderngl
 from graphicslab.camera import CameraMode

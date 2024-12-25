@@ -8,11 +8,8 @@ from collections import deque
 import argparse
 import logging
 
-import moderngl
-import moderngl_window
 from moderngl_window.context.base import WindowConfig
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
-from moderngl_window.conf import settings
 from imgui_bundle import imgui
 
 from graphicslab.consts import assets_path

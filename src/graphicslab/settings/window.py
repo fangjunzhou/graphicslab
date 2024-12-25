@@ -6,7 +6,7 @@ from imgui_bundle import imgui, imgui_ctx
 
 from graphicslab.window import Window
 from graphicslab.settings.decorator import SettingsField, FieldStyle
-from graphicslab.settings.settings import Settings, SettingsState, SettingsObserver
+from graphicslab.settings.settings import Settings, SettingsState
 from graphicslab.settings.utils import save_settings
 
 

@@ -1,7 +1,6 @@
 import logging
 import os
 import pathlib
-import threading
 
 from dataclasses_json.api import A
 import moderngl
