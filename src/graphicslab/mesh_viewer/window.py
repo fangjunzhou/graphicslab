@@ -5,6 +5,7 @@ from typing import Callable, List, Tuple
 import pathlib
 import logging
 import glm
+from graphicslab.mesh_viewer.camera_control_window import CameraControlWindow, CameraParameters
 from imgui_bundle import imgui, imgui_ctx, portable_file_dialogs
 from moderngl_window.integrations.imgui_bundle import ModernglWindowRenderer
 import numpy as np
@@ -35,25 +36,6 @@ builtin_viewer_shaders = {
 logger = logging.getLogger(__name__)
 
 
-@dataclass
-class CameraParameters:
-    # Camera position.
-    rho: float = 3
-    theta: float = np.pi / 2
-    phi: float = np.pi / 4
-    # Camera mode.
-    cam_modes = [CameraMode.ORTHOGONAL, CameraMode.PERSPECTIVE]
-    cam_modes_str = [str(mode) for mode in cam_modes]
-    cam_mode_idx: int = 1
-    # Clipping plane.
-    cam_near: float = 0.1
-    cam_far: float = 100
-    # Orthogonal parameters.
-    cam_orth_scale: float = 10
-    # Orthogonal parameters.
-    cam_perspective_fov: float = 90
-
-
 class MeshViewerWindow(Window):
     # Internal states.
     ctx: moderngl.Context
@@ -65,8 +47,10 @@ class MeshViewerWindow(Window):
 
     # Camera states.
     cam_states: CameraParameters = CameraParameters()
-    # Viewport states.
+    # Viewport.
     viewport: Viewport
+    # Camera control
+    camera_control: CameraControlWindow
 
     # ----------------------- ImGui States ----------------------- #
 
@@ -76,7 +60,6 @@ class MeshViewerWindow(Window):
 
     # Camera control.
     show_cam_control: bool = False
-    zoom_sensitivity = 1
 
     # Shading control.
     show_shading_control: bool = False
@@ -114,8 +97,20 @@ class MeshViewerWindow(Window):
         self.viewport = Viewport(self.ctx)
         self.imgui_renderer.register_texture(self.viewport.render_texture)
         self.load_builtin_shader()
+        # Initialize camera control window.
+
+        def close_camera_control():
+            self.show_cam_control = False
+
+        self.camera_control = CameraControlWindow(
+            close_window=close_camera_control,
+            cam_states=self.cam_states,
+            viewport=self.viewport,
+            update_view_mat=self.update_view_mat,
+            update_projection_mat=self.update_projection_mat
+        )
         # Initialize viewport matrices.
-        self.viewport.update_view_mat(*self.get_cam_transform())
+        self.update_view_mat()
         self.update_projection_mat()
 
     def __del__(self):
@@ -174,6 +169,9 @@ class MeshViewerWindow(Window):
         cam_rot = glm.quatLookAt(cam_dir, cam_up)
         return cam_pos, cam_rot
 
+    def update_view_mat(self):
+        self.viewport.update_view_mat(*self.get_cam_transform())
+
     def update_projection_mat(self):
         """Update camera intrinsic (perspective matrix)."""
         if self.cam_states.cam_modes[self.cam_states.cam_mode_idx] == CameraMode.ORTHOGONAL:
@@ -190,79 +188,6 @@ class MeshViewerWindow(Window):
             )
         else:
             logger.error("Camera mode not supported yet.")
-
-    def cam_control_window(self):
-        cam_states = self.cam_states
-        imgui.set_next_window_size_constraints(
-            size_min=(400, 100),
-            size_max=(imgui.FLT_MAX, imgui.FLT_MAX)
-        )
-        with imgui_ctx.begin("Mesh Viewer Camera Control", True) as (expanded, opened):
-            if not opened:
-                self.show_cam_control = False
-
-            imgui.push_item_width(-200)
-
-            imgui.separator_text("Camera Extrinsics")
-
-            changed, cam_states.rho = imgui.slider_float(
-                "Camera Distance (rho)",
-                cam_states.rho,
-                1, 20
-            )
-            if changed:
-                self.viewport.update_view_mat(*self.get_cam_transform())
-            _, self.zoom_sensitivity = imgui.slider_float(
-                "Zoom Sensitivity",
-                self.zoom_sensitivity,
-                0.1, 10
-            )
-            changed, cam_states.theta = imgui.drag_float(
-                "Camera Rotation-XY (theta)",
-                cam_states.theta,
-                0.1,
-            )
-            if changed:
-                # let theta in [-pi, pi]
-                cam_states.theta = (cam_states.theta +
-                                    np.pi) % (2 * np.pi) - np.pi
-                self.viewport.update_view_mat(*self.get_cam_transform())
-            changed, cam_states.phi = imgui.drag_float(
-                "Camera Rotation-Z (phi)",
-                cam_states.phi,
-                0.1
-            )
-            if changed:
-                cam_states.phi = (cam_states.phi + np.pi) % (2 * np.pi) - \
-                    np.pi  # let phi in [-pi, pi]
-                self.viewport.update_view_mat(*self.get_cam_transform())
-
-            imgui.separator_text("Camera Intrinsics")
-
-            changed, cam_states.cam_mode_idx = imgui.combo(
-                "Camera Mode", cam_states.cam_mode_idx, cam_states.cam_modes_str)
-            if changed:
-                self.update_projection_mat()
-            changed, cam_states.cam_near = imgui.slider_float(
-                "Near Clipping Distance", cam_states.cam_near, 0.001, 1)
-            if changed:
-                self.update_projection_mat()
-            changed, cam_states.cam_far = imgui.slider_float(
-                "Far Clipping Distance", cam_states.cam_far, 2, 100)
-            if changed:
-                self.update_projection_mat()
-            if cam_states.cam_modes[cam_states.cam_mode_idx] == CameraMode.ORTHOGONAL:
-                changed, cam_states.cam_orth_scale = imgui.slider_float(
-                    "Orthogonal Scale", cam_states.cam_orth_scale, 1, 20)
-                if changed:
-                    self.update_projection_mat()
-            elif cam_states.cam_modes[cam_states.cam_mode_idx] == CameraMode.PERSPECTIVE:
-                changed, cam_states.cam_perspective_fov = imgui.slider_float(
-                    "Verticle FOV", cam_states.cam_perspective_fov, 30, 120)
-                if changed:
-                    self.update_projection_mat()
-
-            imgui.pop_item_width()
 
     def shading_control_window(self):
         imgui.set_next_window_size_constraints(
@@ -352,7 +277,7 @@ class MeshViewerWindow(Window):
 
         # Camera contol window.
         if self.show_cam_control:
-            self.cam_control_window()
+            self.camera_control.render(time, frame_time)
 
         # Shading control window.
         if self.show_shading_control:
@@ -426,7 +351,7 @@ class MeshViewerWindow(Window):
             if imgui.is_item_hovered():
                 cam_states = self.cam_states
                 mouse_sensitivity = self.settings_observer.value.interface_settings.viewport_mouse_sensitivity.value
-                scroll_sensitivity = self.zoom_sensitivity
+                scroll_sensitivity = self.camera_control.zoom_sensitivity
                 if self.settings_observer.value.interface_settings.revert_zoom.value:
                     scroll_sensitivity = -scroll_sensitivity
                 mouse_delta = self.io.mouse_delta
