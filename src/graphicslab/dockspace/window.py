@@ -46,6 +46,7 @@ class Dockspace:
     show_settings: bool = False
     # Views
     show_mesh_viewer: bool = False
+    show_metrics_debugger: bool = False
     # About
     show_about: bool = False
 
@@ -146,6 +147,10 @@ class Dockspace:
                         )
                     else:
                         self.remove_window("mesh_viewer")
+                # ImGui debugger.
+                _, self.show_metrics_debugger = imgui.menu_item(
+                    "ImGui Metrics Debugger", "", self.show_metrics_debugger
+                )
                 imgui.end_menu()
 
             # -------------------------- About  -------------------------- #
@@ -193,6 +198,12 @@ class Dockspace:
                     "Mesh Viewer Shading Control", mesh_viewer_control)
                 imgui.internal.dock_builder_finish(dockspace_id)
             imgui.dock_space(dockspace_id)
+
+        # ImGui Debugger.
+        if self.show_metrics_debugger:
+            self.show_metrics_debugger = bool(
+                imgui.show_metrics_window(self.show_metrics_debugger)
+            )
 
         # ------------------------ Status Bar ------------------------ #
 
