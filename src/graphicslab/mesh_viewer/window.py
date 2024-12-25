@@ -433,10 +433,8 @@ class MeshViewerWindow(Window):
                 mouse_delta = self.io.mouse_delta
                 if self.settings_observer.value.interface_settings.use_trackpad.value:
                     # Trackpad camera control.
-                    # FIX: No horizontal scroll.
                     scroll_x = self.io.mouse_wheel_h
                     scroll_y = self.io.mouse_wheel
-                    logger.info(f"Scroll: ({scroll_x}, {scroll_y})")
                     cam_states.theta -= scroll_x / 100 * mouse_sensitivity
                     cam_states.theta = (
                         cam_states.theta + np.pi) % (2 * np.pi) - np.pi
