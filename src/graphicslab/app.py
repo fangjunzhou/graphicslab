@@ -23,6 +23,17 @@ from graphicslab.settings.utils import load_settings
 logger = logging.getLogger(__name__)
 
 
+class GraphicsLabWindowRenderer(ModernglWindowRenderer):
+    def __init__(self, window):
+        super().__init__(window)
+
+    def _init_key_maps(self):
+        super()._init_key_maps()
+        keys = self.wnd.keys
+        self.REVERSE_KEYMAP[keys.LEFT_SHIFT] = imgui.Key.left_shift
+        self.REVERSE_KEYMAP[keys.RIGHT_SHIFT] = imgui.Key.right_shift
+
+
 class App(WindowConfig):
     # ---------------------- Window Config  ---------------------- #
 
@@ -83,7 +94,8 @@ class App(WindowConfig):
         self.io.set_ini_filename("")
         self.io.set_log_filename("")
         # Initialize renderer.
-        self.imgui_renderer = ModernglWindowRenderer(self.wnd)
+        self.wnd.keys
+        self.imgui_renderer = GraphicsLabWindowRenderer(self.wnd)
         logger.info("ImGui initialized.")
         # Initialize FBO stack.
         fbo_stack.push(self.wnd.fbo)
