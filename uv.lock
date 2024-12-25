@@ -442,7 +442,7 @@ requires-dist = [
     { name = "dataclasses-json", specifier = ">=0.6.7" },
     { name = "imgui-bundle", specifier = ">=1.6.1" },
     { name = "moderngl", specifier = ">=5.12.0" },
-    { name = "moderngl-window", extras = ["imgui"], specifier = ">=3.0.3" },
+    { name = "moderngl-window", extras = ["imgui"], editable = "submodules/moderngl-window" },
     { name = "numpy", specifier = ">=2.2.0" },
     { name = "pillow", specifier = ">=11.0.0" },
     { name = "py-observer", git = "https://github.com/fangjunzhou/python-observer" },
@@ -1001,8 +1001,8 @@ wheels = [
 
 [[package]]
 name = "moderngl-window"
-version = "3.0.3"
-source = { registry = "https://pypi.org/simple" }
+version = "3.1.0"
+source = { editable = "submodules/moderngl-window" }
 dependencies = [
     { name = "moderngl" },
     { name = "numpy" },
@@ -1010,14 +1010,43 @@ dependencies = [
     { name = "pyglet" },
     { name = "pyglm" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/3c/16/de061149e35208cee45f1365019692a237046dc02fa413d07d28549c4811/moderngl_window-3.0.3.tar.gz", hash = "sha256:b6108c2396cc54d444c11d7fc77a4db0c2c9a4d74c438ab75ea0ea61949b3143", size = 352522 }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/5a/36/89ff8b3d84ea796c582fd66a7a00cc7c28e1b52998b84e38d5368463b528/moderngl_window-3.0.3-py3-none-any.whl", hash = "sha256:897d7b3b489824b352218561514979e78c4069172a73e42386f7f22db51029da", size = 381727 },
-]
 
 [package.optional-dependencies]
 imgui = [
     { name = "imgui-bundle" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "av", marker = "extra == 'av'" },
+    { name = "build", marker = "extra == 'dev'" },
+    { name = "coverage", marker = "extra == 'dev'" },
+    { name = "doc8", marker = "extra == 'docs'" },
+    { name = "glfw", marker = "extra == 'glfw'" },
+    { name = "imgui-bundle", marker = "extra == 'imgui'" },
+    { name = "moderngl", specifier = "<6" },
+    { name = "mypy", marker = "extra == 'dev'" },
+    { name = "numpy" },
+    { name = "pillow", specifier = ">=10.0.1" },
+    { name = "pygame", marker = "extra == 'pygame'", specifier = ">=2.0.1" },
+    { name = "pygame-ce", marker = "extra == 'pygame-ce'", specifier = ">=2.0.1" },
+    { name = "pyglet", specifier = ">=2.0.0" },
+    { name = "pyglm", specifier = ">=2.7.0,<3" },
+    { name = "pyopengltk", marker = "extra == 'tk'", specifier = ">=0.0.3" },
+    { name = "pyqt5", marker = "extra == 'pyqt5'" },
+    { name = "pysdl2", marker = "extra == 'pysdl2'" },
+    { name = "pyside2", marker = "extra == 'pyside2'", specifier = "<6" },
+    { name = "pytest", marker = "extra == 'dev'" },
+    { name = "pywavefront", marker = "extra == 'dev'" },
+    { name = "pywavefront", marker = "extra == 'pywavefront'", specifier = ">=1.2.0,<2" },
+    { name = "reportlab", marker = "extra == 'pdf'", specifier = ">=1.2" },
+    { name = "ruff", marker = "extra == 'dev'" },
+    { name = "scipy", marker = "extra == 'dev'" },
+    { name = "sphinx", marker = "extra == 'docs'", specifier = "~=8.1.3" },
+    { name = "sphinx-rtd-dark-mode", marker = "extra == 'docs'", specifier = "==1.3.0" },
+    { name = "sphinx-rtd-theme", marker = "extra == 'docs'", specifier = "~=3.0.1" },
+    { name = "trimesh", marker = "extra == 'dev'" },
+    { name = "trimesh", marker = "extra == 'trimesh'", specifier = ">=3.2.6" },
 ]
 
 [[package]]

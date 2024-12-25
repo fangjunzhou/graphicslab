@@ -1,0 +1,3 @@
+[submodule "submodules/moderngl-window"]
+	path = submodules/moderngl-window
+	url = git@github.com:fangjunzhou/moderngl-window.git

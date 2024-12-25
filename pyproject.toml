@@ -34,6 +34,7 @@ using = "PEP631"
 
 [tool.uv.sources]
 py-observer = { git = "https://github.com/fangjunzhou/python-observer" }
+moderngl-window = { path = "submodules/moderngl-window", editable = true }
 
 [project.scripts]
 start = "graphicslab.__main__:main"
