@@ -2,8 +2,10 @@ import logging
 import pathlib
 from typing import Callable
 
+import glm
 from imgui_bundle import imgui, imgui_ctx, portable_file_dialogs
 
+from graphicslab.mesh_viewer.viewport import Viewport
 from graphicslab.consts import assets_path
 from graphicslab.window import Window
 
@@ -24,7 +26,7 @@ logger = logging.getLogger(__name__)
 
 class ShadingControlWindow(Window):
     # Load shader callback.
-    load_shader: Callable[[pathlib.Path, pathlib.Path], None]
+    viewport: Viewport
     # Shader selection.
     avail_shaders = list(builtin_viewer_shaders.keys())
     avail_shaders.append("custom")
@@ -38,10 +40,10 @@ class ShadingControlWindow(Window):
     def __init__(
         self,
         close_window: Callable[[], None],
-        load_shader: Callable[[pathlib.Path, pathlib.Path], None]
+        viewport: Viewport
     ):
         super().__init__(close_window)
-        self.load_shader = load_shader
+        self.viewport = viewport
 
     def load_builtin_shader(self):
         # Shader name
@@ -49,7 +51,7 @@ class ShadingControlWindow(Window):
         logger.info(f"Loading shader {shader_name}")
         # Load shader to viewport.
         shader_paths = builtin_viewer_shaders[shader_name]
-        self.load_shader(
+        self.viewport.load_shader(
             shader_paths["vert"],
             shader_paths["frag"]
         )
@@ -59,7 +61,7 @@ class ShadingControlWindow(Window):
             logger.warning(
                 "Vertex or fragment shader not selected, abort loading shader.")
         else:
-            self.load_shader(
+            self.viewport.load_shader(
                 self.custom_vert_path,
                 self.custom_frag_path
             )
@@ -72,8 +74,10 @@ class ShadingControlWindow(Window):
         with imgui_ctx.begin("Mesh Viewer Shading Control", True) as (expanded, opened):
             if not opened:
                 self.show_shading_control = False
-            # Shading.
             imgui.push_item_width(-100)
+
+            # Shading.
+            imgui.separator_text("Shading")
             changed, self.shader_idx = imgui.combo(
                 "Shader", self.shader_idx, self.avail_shaders)
             if changed:
@@ -142,4 +146,19 @@ class ShadingControlWindow(Window):
                 if imgui.button("Reload Shader", (-imgui.FLT_MIN, 0)):
                     self.load_custom_shader()
 
+            # Misc.
+            imgui.separator_text("Miscellaneous Shading Option")
+
             imgui.pop_item_width()
+
+            _, self.viewport.draw_wire_frame = imgui.checkbox(
+                "Draw Wire Frame",
+                self.viewport.draw_wire_frame
+            )
+
+            changed, wire_color = imgui.color_edit3(
+                "Wire Frame Color",
+                self.viewport.wire_color.to_list()
+            )
+            if changed:
+                self.viewport.wire_color = glm.vec3(*wire_color)

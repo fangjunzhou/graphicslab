@@ -2,6 +2,9 @@ import logging
 import pathlib
 from typing import List, Tuple
 
+from graphicslab.consts import assets_path
+
+import moderngl
 import numpy as np
 import glm
 from moderngl import CULL_FACE, DEPTH_TEST, Buffer, Context, Framebuffer, Program, Renderbuffer, Texture, Uniform, VertexArray
@@ -13,6 +16,10 @@ from graphicslab.lib.shader import Shader
 
 
 logger = logging.getLogger(__name__)
+
+
+wire_vert_path = assets_path / "shaders" / "wire_frame" / "vert.glsl"
+wire_frag_path = assets_path / "shaders" / "wire_frame" / "frag.glsl"
 
 
 class Viewport:
@@ -27,11 +34,18 @@ class Viewport:
     depth_buffer: Renderbuffer
     fbo: Framebuffer
 
-    shader: Shader
-    program: Program
+    mesh_shader: Shader
+    mesh_program: Program
     vbo_list: List[Tuple[Buffer, str, str]]
-    ibo: Buffer | None = None
-    vao: VertexArray
+    mesh_ibo: Buffer | None = None
+    mesh_vao: VertexArray
+
+    # Wire frame.
+    draw_wire_frame: bool = True
+    wire_color: glm.vec3 = glm.vec3(0.1, 0.1, 0.1)
+    wire_program: Program
+    wire_ibo: Buffer | None = None
+    wire_vao: VertexArray
 
     # Viewport matrices.
     model_mat = glm.identity(glm.mat4x4)
@@ -47,6 +61,12 @@ class Viewport:
             depth_attachment=self.depth_buffer
         )
         self.vbo_list = []
+        wire_vert_src = wire_vert_path.read_text()
+        wire_frag_src = wire_frag_path.read_text()
+        self.wire_program = self.ctx.program(
+            vertex_shader=wire_vert_src,
+            fragment_shader=wire_frag_src
+        )
 
     def load_shader(self, vert_path: pathlib.Path, frag_path: pathlib.Path):
         """
@@ -56,19 +76,19 @@ class Viewport:
             vert_path: path to vertext shader.
             frag_path: path to fragment shader.
         """
-        self.shader = Shader(
+        self.mesh_shader = Shader(
             self.ctx,
             vert_path,
             frag_path
         )
-        self.program = self.shader.program
+        self.mesh_program = self.mesh_shader.program
         logger.info(f"Shader loaded from {vert_path} and {frag_path}")
         self.assemble_vao()
 
     def update_shader(self):
-        if not self.shader.reload_shader():
+        if not self.mesh_shader.reload_shader():
             return False
-        self.program = self.shader.program
+        self.mesh_program = self.mesh_shader.program
         self.assemble_vao()
         return True
 
@@ -98,22 +118,42 @@ class Viewport:
                 "in_norm"
             )
         )
-        self.ibo = self.ctx.buffer(mesh_loader.index_buf)
+        self.mesh_ibo = self.ctx.buffer(mesh_loader.index_buf)
+        index_arr = mesh_loader.index_arr
+        wire_arr = np.hstack(
+            (
+                np.vstack((index_arr[:, 0], index_arr[:, 1])),
+                np.vstack((index_arr[:, 1], index_arr[:, 2])),
+                np.vstack((index_arr[:, 0], index_arr[:, 2])),
+            )
+        ).T
+        wire_arr.sort(axis=1)
+        wire_arr = np.unique(wire_arr, axis=0)
+        self.wire_ibo = self.ctx.buffer(wire_arr.tobytes())
         self.assemble_vao()
         return True
 
     def assemble_vao(self):
         """Assemble VAO using shader, VBO, and IBO"""
-        content_buf = []
+        mesh_content_buf = []
         for vbo, buf_fmt, in_param in self.vbo_list:
-            if in_param in self.program:
-                content_buf.append((vbo, buf_fmt, in_param))
-        self.vao = self.ctx.vertex_array(
-            self.program,
-            content_buf,
-            index_buffer=self.ibo
+            if in_param in self.mesh_program:
+                mesh_content_buf.append((vbo, buf_fmt, in_param))
+        self.mesh_vao = self.ctx.vertex_array(
+            self.mesh_program,
+            mesh_content_buf,
+            index_buffer=self.mesh_ibo
         )
-        logger.info(f"VAO updated with {len(content_buf)} buffers.")
+        logger.info(f"Mesh VAO updated with {len(mesh_content_buf)} buffers.")
+        wire_content_buf = []
+        for vbo, buf_fmt, in_param in self.vbo_list:
+            if in_param in self.wire_program:
+                wire_content_buf.append((vbo, buf_fmt, in_param))
+        self.wire_vao = self.ctx.vertex_array(
+            self.wire_program,
+            wire_content_buf,
+            index_buffer=self.wire_ibo
+        )
 
     def resize(self, w: int, h: int):
         self.size = (w, h)
@@ -184,30 +224,60 @@ class Viewport:
         mat_P = self.perspective_mat
         mat_MV = mat_V @ mat_M
         mat_MVP = mat_P @ mat_MV
-        # Write unifroms.
-        if "mat_M" in self.program:
-            uniform_mat_M = self.program["mat_M"]
+        # Write mesh program unifroms.
+        if "mat_M" in self.mesh_program:
+            uniform_mat_M = self.mesh_program["mat_M"]
             if type(uniform_mat_M) is Uniform:
                 uniform_mat_M.write(mat_M.to_bytes())
-        if "mat_V" in self.program:
-            uniform_mat_V = self.program["mat_V"]
+        if "mat_V" in self.mesh_program:
+            uniform_mat_V = self.mesh_program["mat_V"]
             if type(uniform_mat_V) is Uniform:
                 uniform_mat_V.write(mat_V.to_bytes())
-        if "mat_P" in self.program:
-            uniform_mat_P = self.program["mat_P"]
+        if "mat_P" in self.mesh_program:
+            uniform_mat_P = self.mesh_program["mat_P"]
             if type(uniform_mat_P) is Uniform:
                 uniform_mat_P.write(mat_P.to_bytes())
-        if "mat_MV" in self.program:
-            uniform_mat_MV = self.program["mat_MV"]
+        if "mat_MV" in self.mesh_program:
+            uniform_mat_MV = self.mesh_program["mat_MV"]
             if type(uniform_mat_MV) is Uniform:
                 uniform_mat_MV.write(mat_MV.to_bytes())
-        if "mat_MVP" in self.program:
-            uniform_mat_MVP = self.program["mat_MVP"]
+        if "mat_MVP" in self.mesh_program:
+            uniform_mat_MVP = self.mesh_program["mat_MVP"]
             if type(uniform_mat_MVP) is Uniform:
                 uniform_mat_MVP.write(mat_MVP.to_bytes())
+        # Write wire frame uniforms.
+        if "mat_M" in self.wire_program:
+            uniform_mat_M = self.wire_program["mat_M"]
+            if type(uniform_mat_M) is Uniform:
+                uniform_mat_M.write(mat_M.to_bytes())
+        if "mat_V" in self.wire_program:
+            uniform_mat_V = self.wire_program["mat_V"]
+            if type(uniform_mat_V) is Uniform:
+                uniform_mat_V.write(mat_V.to_bytes())
+        if "mat_P" in self.wire_program:
+            uniform_mat_P = self.wire_program["mat_P"]
+            if type(uniform_mat_P) is Uniform:
+                uniform_mat_P.write(mat_P.to_bytes())
+        if "mat_MV" in self.wire_program:
+            uniform_mat_MV = self.wire_program["mat_MV"]
+            if type(uniform_mat_MV) is Uniform:
+                uniform_mat_MV.write(mat_MV.to_bytes())
+        if "mat_MVP" in self.wire_program:
+            uniform_mat_MVP = self.wire_program["mat_MVP"]
+            if type(uniform_mat_MVP) is Uniform:
+                uniform_mat_MVP.write(mat_MVP.to_bytes())
+        if "wire_color" in self.wire_program:
+            uniform_wire_color = self.wire_program["wire_color"]
+            if type(uniform_wire_color) is Uniform:
+                uniform_wire_color.write(self.wire_color.to_bytes())
 
-        # Render vao.
+        # Render mesh.
         if len(self.vbo_list) > 0:
-            self.vao.render()
+            self.mesh_vao.render()
+            # Render wire frame.
+            if self.draw_wire_frame:
+                self.wire_vao.render(
+                    moderngl.LINES
+                )
 
         fbo_stack.pop()

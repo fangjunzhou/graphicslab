@@ -3,6 +3,7 @@ from multiprocessing.connection import Connection
 import threading
 from multiprocessing import Process, Pipe
 from typing import List
+import numpy as np
 
 import trimesh
 from trimesh import Trimesh
@@ -25,6 +26,9 @@ def load_proc(conn: Connection, mesh_path: str):
 
 class MeshLoader:
     mesh: Trimesh | None = None
+    vertex_arr: np.ndarray
+    normal_arr: np.ndarray
+    index_arr: np.ndarray
     vertex_buf: bytes
     normal_buf: bytes
     index_buf: bytes
@@ -50,12 +54,18 @@ class MeshLoader:
 
         if type(mesh) is trimesh.Trimesh:
             logger.info("Loading mesh buffer into byte arrays.")
-            vertex_buf = mesh.vertices.astype("f4").tobytes()
-            normal_buf = mesh.vertex_normals.astype("f4").tobytes()
-            index_buf = mesh.faces.astype("u4").tobytes()
+            vertex_arr = np.array(mesh.vertices).astype("f4")
+            normal_arr = np.array(mesh.vertex_normals).astype("f4")
+            index_arr = np.array(mesh.faces).astype("u4")
+            vertex_buf = vertex_arr.tobytes()
+            normal_buf = normal_arr.tobytes()
+            index_buf = index_arr.tobytes()
             logger.info("Done.")
             with self.mesh_loading_lock:
                 self.mesh = mesh
+                self.vertex_arr = vertex_arr
+                self.normal_arr = normal_arr
+                self.index_arr = index_arr
                 self.vertex_buf = vertex_buf
                 self.normal_buf = normal_buf
                 self.index_buf = index_buf

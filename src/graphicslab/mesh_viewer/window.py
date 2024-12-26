@@ -15,7 +15,6 @@ import moderngl
 from graphicslab.camera import CameraMode
 from graphicslab.dockspace.status import StatusState
 from graphicslab.lib.mesh_loader import MeshLoader
-from graphicslab.lib.shader import Shader
 from graphicslab.mesh_viewer.viewport import Viewport
 from graphicslab.settings.settings import SettingsObserver, SettingsState
 from graphicslab.window import Window
@@ -95,7 +94,7 @@ class MeshViewerWindow(Window):
             self.show_shading_control = False
         self.shading_control = ShadingControlWindow(
             close_window=close_shading_control,
-            load_shader=self.viewport.load_shader
+            viewport=self.viewport
         )
         self.shading_control.load_builtin_shader()
         # Initialize viewport matrices.
