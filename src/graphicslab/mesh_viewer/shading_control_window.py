@@ -73,7 +73,7 @@ class ShadingControlWindow(Window):
         )
         with imgui_ctx.begin("Mesh Viewer Shading Control", True) as (expanded, opened):
             if not opened:
-                self.show_shading_control = False
+                self.close_window()
             imgui.push_item_width(-100)
 
             # Shading.

@@ -32,6 +32,7 @@ class GraphicsLabWindowRenderer(ModernglWindowRenderer):
         keys = self.wnd.keys
         self.REVERSE_KEYMAP[keys.LEFT_SHIFT] = imgui.Key.left_shift
         self.REVERSE_KEYMAP[keys.RIGHT_SHIFT] = imgui.Key.right_shift
+        self.REVERSE_KEYMAP[keys.LEFT_CTRL] = imgui.Key.left_super
 
 
 class App(WindowConfig):
@@ -83,6 +84,8 @@ class App(WindowConfig):
         )
         logger.info("WindowConfig initialized.")
         logger.info(f"Current OpenGL version: {self.gl_version}")
+        # Disable exit key.
+        self.wnd.exit_key = None
         # Load settings.
         self.settings_state.value = load_settings()
         # Initialize ModernGL context.
@@ -146,6 +149,7 @@ class App(WindowConfig):
         self.wnd.swap_buffers()
 
     def on_key_event(self, key, action, modifiers):
+        logger.info((key, action, modifiers))
         self.imgui_renderer.key_event(key, action, modifiers)
 
     def on_mouse_position_event(self, x, y, dx, dy):

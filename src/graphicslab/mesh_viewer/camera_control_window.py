@@ -59,7 +59,7 @@ class CameraControlWindow(Window):
         )
         with imgui_ctx.begin("Mesh Viewer Camera Control", True) as (expanded, opened):
             if not opened:
-                self.show_cam_control = False
+                self.close_window()
 
             imgui.push_item_width(-200)
 

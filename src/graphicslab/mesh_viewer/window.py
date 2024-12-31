@@ -189,7 +189,7 @@ class MeshViewerWindow(Window):
             scroll_x = self.io.mouse_wheel_h
             scroll_y = self.io.mouse_wheel
             # If shift is not held, move camera.
-            if not imgui.is_key_down(imgui.Key.left_shift):
+            if not imgui.is_key_down(imgui.Key.left_ctrl):
                 cam_states.theta -= scroll_x / 100 * mouse_sensitivity
                 cam_states.theta = (
                     cam_states.theta + np.pi) % (2 * np.pi) - np.pi
